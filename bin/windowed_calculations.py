@@ -53,7 +53,10 @@ parser.add_argument('-ref-pops', '--reference-populations', default=[], nargs='+
 parser.add_argument('-ref-inds', '--reference-individuals', default=[], nargs='+')
 parser.add_argument('-target-pops', '--target-populations', default=[], nargs='+')
 parser.add_argument('-target-inds', '--target-individuals', default=[], nargs='+')
-parser.add_argument('-exclude-pops', '--exclude-populations', default=[], nargs='+')
+parser.add_argument('-exclude-pops', '--exclude-populations', default=[], nargs='+', 
+                    help='Exclude snps where these individuals have a nonref allele (or derived, if an ancestral genome is given)')
+parser.add_argument('-exclude-inds', '--exclude-individuals', default=[], nargs='+',
+                    help='Exclude snps where these individuals have a nonref allele (or derived, if an ancestral genome is given)')
 parser.add_argument('-tag-ids', '--tag-ids', default=[], nargs='+')
 parser.add_argument('-tags', '--tags', default=[], nargs='+')
 parser.add_argument('-d', '--debug', action='store_true')

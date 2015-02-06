@@ -51,9 +51,9 @@ def process_vcf_line_to_genotypes(line, opts):
 
     ## remove individual genotypes that aren't in the target or reference, and reorder (target first, then ref)
     ## (reordered ind ids in read_1kg_ind_pop_file)
-    r_gt = list(itertools.imap(lambda j : genotypes[j], opts.updated_ind_indexed_to_orig_file_reference))
-    t_gt = list(itertools.imap(lambda j : genotypes[j], opts.updated_ind_indexed_to_orig_file_target))
-    e_gt = list(itertools.imap(lambda j : genotypes[j], opts.updated_ind_indexed_to_orig_file_exclude))
+    r_gt = list(itertools.imap(lambda j : genotypes[j], opts.reference_individuals_indexed_to_orig_file))
+    t_gt = list(itertools.imap(lambda j : genotypes[j], opts.target_individuals_indexed_to_orig_file))
+    e_gt = list(itertools.imap(lambda j : genotypes[j], opts.exclude_individuals_indexed_to_orig_file))
 
 
     if flip_for_derived:
@@ -305,48 +305,62 @@ def read_1kg_ind_pop_file(f, opts):
     # HG00099 GBR     EUR     female
 
     header = f.readline()
-    opts.sample_to_pop = {}
-    opts.sample_to_superpop = {}
+    sample_to_pop = {}
+    sample_to_superpop = {}
     opts.all_pops = set()
     opts.all_superpops = set()
-    opts.updated_reference_population_inds = set()
-    opts.updated_target_population_inds = set()
-    opts.updated_exclude_population_inds = set()
+    opts.reference_individuals = set(opts.reference_individuals)
+    opts.target_individuals = set(opts.target_individuals)
+    opts.exclude_individuals = set(opts.exclude_individuals)
 
+    ## go through each line in the ind_pop file, and add the individual's ID (i.e., NA12078) to
+    ##  opts.target_individuals, etc, if the pop or superpop matches
+    pop_file_ind_id_order = []
     for line in f:
         (sample, pop, superpop, _) = line.strip().split()
-        opts.sample_to_pop[sample] = pop
-        opts.sample_to_superpop[sample] = superpop
+        sample_to_pop[sample] = pop
+        sample_to_superpop[sample] = superpop
         opts.all_pops.add(pop)
         opts.all_superpops.add(superpop)
+        pop_file_ind_id_order.append(sample)
 
-        if pop      in opts.reference_populations: opts.updated_reference_population_inds.add(sample)
-        if superpop in opts.reference_populations: opts.updated_reference_population_inds.add(sample)
-        if pop      in opts.target_populations:    opts.updated_target_population_inds.add(sample)
-        if superpop in opts.target_populations:    opts.updated_target_population_inds.add(sample)
-        if pop      in opts.exclude_populations:   opts.updated_exclude_population_inds.add(sample)
-        if superpop in opts.exclude_populations:   opts.updated_exclude_population_inds.add(sample)
+        if pop      in opts.reference_populations: opts.reference_individuals.add(sample)
+        if superpop in opts.reference_populations: opts.reference_individuals.add(sample)
+
+        if pop      in opts.target_populations:    opts.target_individuals.add(sample)
+        if superpop in opts.target_populations:    opts.target_individuals.add(sample)
+
+        if pop      in opts.exclude_populations:   opts.exclude_individuals.add(sample)
+        if superpop in opts.exclude_populations:   opts.exclude_individuals.add(sample)
 
         pass
 
-    opts.updated_target_population_inds.update(opts.target_individuals)
-    opts.updated_reference_population_inds.update(opts.reference_individuals)
-    # opts.updated_exclude_population_inds.update(opts.exclude_individuals)
+    ## now sort them by order in the ind_pop file
+    opts.target_individuals     = [i for i in pop_file_ind_id_order if i in opts.target_individuals]
+    opts.exclude_individuals    = [i for i in pop_file_ind_id_order if i in opts.exclude_individuals]
+    opts.reference_individuals  = [i for i in pop_file_ind_id_order if i in opts.reference_individuals]
 
-    opts.updated_ind_ids_target    = [i for i in opts.original_file_ind_ids if i in opts.updated_target_population_inds]
-    opts.updated_ind_ids_exclude    = [i for i in opts.original_file_ind_ids if i in opts.updated_exclude_population_inds]
-    opts.updated_ind_ids_reference = [i for i in opts.original_file_ind_ids if i in opts.updated_reference_population_inds]
-    opts.updated_ind_indexed_to_orig_file_target    = [opts.original_file_ind_ids.index(ind) for ind in opts.updated_ind_ids_target]
-    opts.updated_ind_indexed_to_orig_file_exclude    = [opts.original_file_ind_ids.index(ind) for ind in opts.updated_ind_ids_exclude]
-    opts.updated_ind_indexed_to_orig_file_reference = [opts.original_file_ind_ids.index(ind) for ind in opts.updated_ind_ids_reference]
+    ## and make sure we have a mapping back to the order in the original vcf file
+    opts.target_individuals_indexed_to_orig_file    = [opts.sample_index_in_original_file[ind] for ind in opts.target_individuals]
+    opts.exclude_individuals_indexed_to_orig_file   = [opts.sample_index_in_original_file[ind] for ind in opts.exclude_individuals]
+    opts.reference_individuals_indexed_to_orig_file = [opts.sample_index_in_original_file[ind] for ind in opts.reference_individuals]
 
-    opts.updated_ind_ids = opts.updated_ind_ids_target + opts.updated_ind_ids_reference
-    opts.updated_ind_indexed_to_orig_file = opts.updated_ind_indexed_to_orig_file_target + opts.updated_ind_indexed_to_orig_file_reference
-    opts.num_target = len(opts.updated_ind_ids_target)
-    opts.num_reference = len(opts.updated_ind_ids_reference)
+    # print "opts.target_individuals", opts.target_individuals
+    # print "opts.target_individuals", opts.target_individuals
+    # print "pop_file_ind_id_order", pop_file_ind_id_order
+
+    sample_ids = opts.target_individuals + opts.reference_individuals
+    # opts.updated_ind_ids = opts.updated_ind_ids_target + opts.updated_ind_ids_reference
+    # opts.updated_ind_indexed_to_orig_file = opts.updated_ind_indexed_to_orig_file_target + opts.updated_ind_indexed_to_orig_file_reference
+    opts.num_target = len(opts.target_individuals)
+    opts.num_reference = len(opts.reference_individuals)
+    opts.num_samples = opts.num_target + opts.num_reference
 
     opts.target_indices = range(opts.num_target)
     opts.reference_indices = range(opts.num_target, opts.num_target+opts.num_reference)
+
+    opts.get_id_from_sample_index = lambda ind: sample_ids[ind]
+    opts.get_pop_from_sample_index = lambda ind: sample_to_pop[sample_ids[ind]]
     
     return# (sample_to_pop, sample_to_superpop)
 
@@ -364,6 +378,7 @@ def read_vcf_header(vcf_file, opts):
         sys.exit(-1)
         pass
 
-    opts.original_file_ind_ids = line.strip().split()[9:]
-    opts.original_file_ind_index = {id:i for i,id in enumerate(opts.original_file_ind_ids)}
+    # opts.original_file_ind_ids = line.strip().split()[9:]
+    # opts.original_file_ind_index = {id:i for i,id in enumerate(opts.original_file_ind_ids)}
+    opts.sample_index_in_original_file = {id:i for i,id in enumerate(line.strip().split()[9:])}
     return

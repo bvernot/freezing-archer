@@ -3,7 +3,6 @@ from collections import defaultdict
 import locale
 import gzip
 
-sys.path.append('/net/akey/vol1/home/bvernot/tishkoff/filter_files/')
 from myBedTools3 import myBedTools
 
 ## in original mybedtools, I allowed the user to specify the ref version with namespace.ref_version
@@ -27,7 +26,8 @@ class missingdict(defaultdict):
 
 class vcf_class(object):
 
-    geno_map = {'0/0':0, '0/1':1, '1/0':1, '1/1':2}
+    geno_map = {'0/0':0, '0/1':1, '1/0':1, '1/1':2, 
+                '0|0':0, '0|1':1, '1|0':1, '1|1':2}
 
     def __init__(self, vcf):
         self.vcf = vcf
@@ -73,7 +73,13 @@ class VCFFileAction(argparse.Action):
         warn_strip_chrom = False
         for line in vcffile:
             if line.strip().startswith('#'): continue
-            [chrom, pos, _, ref, alt, qual, _, _, _, gt_info] = line.strip().split()
+            try:
+                [chrom, pos, _, ref, alt, qual, _, _, _, gt_info] = line.strip().split()
+            except ValueError:
+                print "Too many lines in VCF?  Expecting one individual (9 columns):"
+                print line
+                sys.exit(-1)
+                pass
             if namespace.vcf_has_illumina_chrnums and chrom.startswith('chr'):
                 chrom = chrom[3:]
                 warn_strip_chrom = True
@@ -168,6 +174,10 @@ def munge_regions(opts):
         opts.regions.bases.invert()
         pass
         
-    if opts.regions != None: sys.stderr.write('Final number of bases considered (regions, exclude, intersect, etc): %s\n' % locale.format('%d', opts.regions.total_length(), grouping=True))
-    
+    if opts.regions != None: sys.stderr.write('Final number of bases considered (regions, exclude, intersect, etc): %s\n\n' % locale.format('%d', opts.regions.total_length(), grouping=True))
+
+    if opts.regions == None: 
+        sys.stderr.write('NO MASKING GIVEN - ASSUMING WHOLE GENOME IS PERFECT (hint: this is probably not a good assumption)\n\n')
+        pass
+
     return
