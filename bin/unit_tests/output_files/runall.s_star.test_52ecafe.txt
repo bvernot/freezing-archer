@@ -1,0 +1,7 @@
+chrom	winstart	winend	n_snps	n_ind_snps	ind_id	pop	s_star	s_star_snps	hap_1_window_pval	hap_2_window_pval	hap_1_window_match_pct	hap_2_window_match_pct	ref_nocals	n_s_star_snps_hap1	n_s_star_snps_hap2	s_star_haps
+chrT	0	50000	19	7	i1	p1	51470	2309,25354,26654,29724,40809,45079	1.0	1.0	0.0	0.0	0	4	6	2,2,3,3,3,3
+chrT	0	50000	19	10	i2	p1	86110	7879,17324,19124,26654,29724,30769,38009,40809,45079,48989	1.0	1.0	0.0	0.0	0	0	10	2,2,2,2,2,2,2,2,2,2
+chrT	0	50000	19	6	i3	p2	36005	11484,19064,26654,29724,40809,45079	1.0	1.0	0.0	0.0	0	4	6	2,2,3,3,3,3
+chrT	0	50000	19	4	i4	p3	33425	26654,29724,40809,45079	1.0	1.0	0.0	0.0	0	4	4	3,3,3,3
+chrT	0	50000	19	0	i5	p4	0	.	1.0	1.0	0.0	0.0	0	0	0	.
+chrT	0	50000	19	0	i6	p4	0	.	1.0	1.0	0.0	0.0	0	0	0	.
