@@ -9,6 +9,7 @@
 
 baseline_git_hash=52ecafe
 baseline_git_hash=32e4bc4
+baseline_git_hash=189efad # local pval on S* regions
 current_git_hash=$(git log --pretty=format:'%h' -n 1)
 
 ofile_current=output_files/runall.s_star.test_$current_git_hash.txt
