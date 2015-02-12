@@ -78,7 +78,7 @@ def calc_s_star(genotypes, positions, nsnps):
     return( s_star, chosen_snps )
 
 
-def calc_match_pval(chrom, winstart, winend, ind_snps, opts):
+def calc_match_pval_from_genome_tables(chrom, winstart, winend, ind_snps, opts):
 
     match_pval_debug = False
     
@@ -169,29 +169,48 @@ local_debug = False
 def initialize_analysis(opts):
     pass
 
-def calc_match_pval2(chrom, winstart, winend, snps, opts):
+def calc_local_match_pval(chrom, winstart, winend, snps, opts, ind_indices = None, subset_start = None, subset_end = None):
+
+    if ind_indices == None: ind_indices = opts.target_indices
+    if isinstance(ind_indices, int): ind_indices = [ind_indices]
+
+    if subset_start == None: subset_start = winstart
+    # subset_end is *inclusive*, unlike winend
+    if subset_end == None: subset_end = winend-1
 
     full_chrom = ('chr' if opts.vcf_has_illumina_chrnums else '') + chrom
-    my_mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend) if opts.regions != None else opts.window_length
-    my_mapped_bases_bin = my_mapped_bases // 1000 * 1000
+    # if we use mapped bases, have to account for subset..
+    #my_mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend) if opts.regions != None else opts.window_length
+    #my_mapped_bases_bin = my_mapped_bases // 1000 * 1000
 
     # get neand hom snps for this region - i.e., we're only looking for sites that have only non-ref
-    neand_pos = [p for p in range(winstart, winend) \
+    neand_pos = [p for p in range(subset_start, subset_end+1) \
                      if opts.neand_vcf.has_var_at_site(chrom, p) and \
                      not opts.neand_vcf.has_ref(chrom, p) and \
                      (opts.regions == None or opts.regions.in_region_one_based(full_chrom, p))]
+
+    # print neand_pos
+    # for p in [2000, 2001, 2309, 7879, 16249]:
+    #     print '%6d ref=%r var=%r geno=%s' % (p, opts.neand_vcf.has_ref(chrom, p), opts.neand_vcf.has_var_at_site(chrom, p))
+    #     pass
 
     # save two spots for each individual (one for each haplotype)
     # the code below assumes that the ref inds are first, then target (where we actually calculate the pval, not the match pct loop immediately below)
     # but it would be good to factor that out - to just use a fn that returns the indices for target set, for ref set, etc
     match_pct = [None,None] * opts.num_samples
 
+    ## just look at sites in the window of interest
+    subset_snps = [s for s in snps if s['pos'] >= subset_start and s['pos'] <= subset_end]
+    # print 'all snps %6d %6d' % (winstart, winend), [s['pos'] for s in snps]
+    # print 'sub snps %6d %6d' % (subset_start, subset_end), [s['pos'] for s in subset_snps]
+    # # print 'sub difs %6d %6d' % (subset_start, subset_end), [subset_end-s['pos'] for s in subset_snps]
+
     ## loop through all individuals (target and ref) and calculate match pct
-    for ind in opts.target_indices + opts.reference_indices:
+    for ind in ind_indices + opts.reference_indices:
 
         # get haplotype snps (two haplotypes per person, natch)
-        ind_hap1 = [s for s in snps if s['haplotypes_1'][ind] > 0]
-        ind_hap2 = [s for s in snps if s['haplotypes_2'][ind] > 0]
+        ind_hap1 = [s for s in subset_snps if s['haplotypes_1'][ind] > 0]
+        ind_hap2 = [s for s in subset_snps if s['haplotypes_2'][ind] > 0]
 
         # get the number of sites to consider for this haplotype (i.e., on this haplotype and/or in neand)
         ind_pos1 = set([s['pos'] for s in ind_hap1])
@@ -215,19 +234,30 @@ def calc_match_pval2(chrom, winstart, winend, snps, opts):
         match_pct[ind*2] = test_ratio1
         match_pct[ind*2+1] = test_ratio2
 
+        if opts.debug: print 'debug_match_pct_fn IND=%d HAP=1 PCT=%f MATCH_NEAND=%s NEAND_POS=%s DENOM=%s' % (ind, test_ratio1,
+                                                                                               str([s['pos'] for s in ind_hap1 if s['arc_match']]),
+                                                                                               str(neand_pos),
+                                                                                               str(my_n_sites1))
+        if opts.debug: print 'debug_match_pct_fn IND=%d HAP=2 PCT=%f MATCH_NEAND=%s NEAND_POS=%s DENOM=%s' % (ind, test_ratio2,
+                                                                                               str([s['pos'] for s in ind_hap2 if s['arc_match']]),
+                                                                                               str(neand_pos),
+                                                                                               str(my_n_sites2))
+
         if opts.debug: print "test_ratio1", winstart, winend, ind, opts.get_pop_from_sample_index(ind), n_match1, len(neand_pos), len(ind_pos1), my_n_sites1, test_ratio1
         if opts.debug: print "test_ratio2", winstart, winend, ind, opts.get_pop_from_sample_index(ind), n_match2, len(neand_pos), len(ind_pos2), my_n_sites2, test_ratio2
 
         pass
 
-    #
 
+    # THIS SHOULD BE CONVERTED TO WORK WITH OPTS.TARGET_INDICES (AND MAYBE I SHOULD MAKE A SEPARATE .TARGET_INDICES_HAPS, SO I DON'T NEED TO DO I*2, I*2+1?)
     ref_nones = sum(p == None for p in match_pct[opts.num_target*2:])
 
     # make a longer pval list than you need, so you can use standard indices
     pvals = [None,None] * opts.num_samples
+    # these aren't in the correct order - i.e., one individual's two haplotypes aren't paired with each other
+    # but that shouldn't matter - we're always just looking at them in aggregate
     ref_match_pct = [match_pct[i*2] for i in opts.reference_indices] + [match_pct[i*2+1] for i in opts.reference_indices]
-    for ind in opts.target_indices:
+    for ind in ind_indices:
         ps_1 = sum(match_pct[ind*2] <= p for p in ref_match_pct)
         ps_2 = sum(match_pct[ind*2+1] <= p for p in ref_match_pct)
         pvals[ind*2] = (ps_1 if ps_1 > 0 else 1) / opts.num_reference / 2
@@ -245,7 +275,20 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
     if opts.debug: print 'starting window', chrom, winstart, winend, 'NUM SNPS:', len(snps)
     if len(snps) <= 2: return
 
-    (match_pvals2, match_pct2, ref_nones) = calc_match_pval2(chrom, winstart, winend, snps, opts)
+    (match_pvals2, match_pct2, ref_nones) = calc_local_match_pval(chrom, winstart, winend, snps, opts)
+
+    # # print snps[0]['pos'], snps[-1]['pos']
+    # (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, 0, subset_start = 2300, subset_end = 48988)
+    # print 'debug match_pval -  whole region', match_pvals2
+    # print 'debug match_pval - subset region', match_pvals3
+
+    # print 'debug match_pct -  whole region', match_pct2
+    # print 'debug match_pct - subset region', match_pct3
+
+    # (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, opts.target_indices)
+    # print 'debug match_pval - subset region', match_pvals3
+    # print 'debug match_pct - subset region', match_pct3
+    
 
     ## JUST LOOP OVER TARGET INDS
     for ind in opts.target_indices:
@@ -253,6 +296,8 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
         ind1_snps = [s for s in snps if s['genotypes'][ind] > 0 and s['target'] and not s['reference']]
         ind1_snps_all = [s for s in snps if s['genotypes'][ind] > 0]
         ind1_pos = [s['pos'] for s in ind1_snps]
+
+        # ind1_hap1 and ind1_hap2 are just masks for which snps are on which haplotypes - they're the same length as ind1_snps
         ind1_hap1 = [s['haplotypes_1'][ind] > 0 for s in ind1_snps]
         ind1_hap2 = [s['haplotypes_2'][ind] > 0 for s in ind1_snps]
 
@@ -263,9 +308,13 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
             if local_debug: print 'skipping ind', ind, opts.get_pop_from_sample_index(ind)
             (s_star, s_star_snps) = (0, [])
         else:
+            ## s_star is the score, and s_star_snps are the indices (wrt ind1_snps) that are selected by s_star
             (s_star, s_star_snps) = calc_s_star([[s['genotypes'][ind]] for s in ind1_snps], ind1_pos, len(ind1_snps))
             pass
-        
+
+        # for s in s_star_snps:
+        #     print s, ind1_snps[s]['pos'], ind1_snps[s]['genotypes'][ind], ind1_snps[s]['arc_match']
+        #     pass
 
         ## find the best haplotype
         n_haps1 = sum(ind1_hap1[i] for i in s_star_snps)
@@ -278,6 +327,12 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
             match_pval = (None,)
             pass
 
+        s_start = ind1_snps[min(s_star_snps)]['pos']
+        s_stop  = ind1_snps[max(s_star_snps)]['pos']
+        (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, ind, subset_start = s_start, subset_end = s_stop)
+        # print ind, s_start, s_stop, match_pvals3
+        # print ind, match_pct3
+
         if opts.first_line:
             print '\t'.join(('chrom', 'winstart', 'winend', 'n_snps', 'n_ind_snps',
                              'ind_id',
@@ -286,6 +341,8 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
                              's_star_snps',
                              'hap_1_window_pval', 'hap_2_window_pval',
                              'hap_1_window_match_pct', 'hap_2_window_match_pct',
+                             'hap_1_window_pval_local', 'hap_2_window_pval_local',
+                             'hap_1_window_match_pct_local', 'hap_2_window_match_pct_local',
                              'ref_nocals',
                              'n_s_star_snps_hap1', 'n_s_star_snps_hap2',
                              's_star_haps'))
@@ -299,6 +356,8 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
                                          ','.join(str(ind1_pos[i]) for i in s_star_snps) if len(s_star_snps) > 0 else '.',
                                          match_pvals2[ind*2], match_pvals2[ind*2+1],
                                          match_pct2[ind*2], match_pct2[ind*2+1],
+                                         match_pvals3[ind*2], match_pvals3[ind*2+1],
+                                         match_pct3[ind*2], match_pct3[ind*2+1],
                                          ref_nones,
                                          n_haps1, n_haps2,
                                          ','.join(str(s) for s in all_haps) if len(s_star_snps) > 0 else '.'))

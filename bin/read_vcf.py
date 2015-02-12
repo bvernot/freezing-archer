@@ -138,6 +138,7 @@ def process_vcf_line_to_genotypes(line, opts):
         else:
             # otherwise, check to see if the alt matches neand
             snp_d['arc_match'] = snp_d['alt'].upper() in opts.neand_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
+            # print 'debug arc_match', snp_d['pos'], snp_d['alt'].upper(), opts.neand_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
             pass
         snp_d['arc_genotype'] = opts.neand_vcf.get_genotype_one_based(snp_d['chrom'], snp_d['pos'], flip_for_derived)
 
