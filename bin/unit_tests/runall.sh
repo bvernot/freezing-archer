@@ -8,6 +8,7 @@
 # echo
 
 baseline_git_hash=52ecafe
+baseline_git_hash=32e4bc4
 current_git_hash=$(git log --pretty=format:'%h' -n 1)
 
 ofile_current=output_files/runall.s_star.test_$current_git_hash.txt
@@ -60,7 +61,7 @@ cat $ofile_current_shuf | transpose | awk '{print NR, $0}' > $ofile_current_shuf
 
 echo
 echo "sdiff of baseline shuffled, and newest version unshuffled"
-sdiff $ofile_baseline_shuf $ofile_current
+sdiff -w200 $ofile_baseline_shuf $ofile_current
 echo
 echo "sdiff of baseline unshuffled, and newest version shuffled (transposed)"
-sdiff $ofile_baseline_cols $ofile_current_shuf_cols
+sdiff -w200 $ofile_baseline_cols $ofile_current_shuf_cols
