@@ -148,15 +148,29 @@ def create_compressed_bed_file_from_bed(opts):
         pass
     opts.bed_files[0].seek(0)
 
+    ## make sure there aren't going to be any issues..
+    for bedfile in opts.bed_files:
+        l = bedfile.readline()
+        l = l.rstrip().split()
+        start = int(l[1])
+        end = int(l[2])
+        chrname = 'chr' + l[0] if int_chrs else l[0]
+        print "testing %s:%d-%d" % (chrname, start, end)
+        f[chrname][start:end] = 1
+        bedfile.seek(0)
+        pass
+
     current_progress = 0
     for bedfile in opts.bed_files:
         for l in bedfile:
             l = l.rstrip().split()
             start = int(l[1])
             end = int(l[2])
-            chr = 'chr' + l[0] if int_chrs else l[0]
+            chrname = 'chr' + l[0] if int_chrs else l[0]
 
-            f[chr][start:end] = 1
+            print "setting %s:%d-%d %s" % (chrname, start, end, ''.join(str(x) for x in f[chrname][(start if start-10<0 else start-10):end+10]))
+            f[chrname][start:end] = 1
+            print "setted  %s:%d-%d %s" % (chrname, start, end, ''.join(str(x) for x in f[chrname][(start if start-10<0 else start-10):end+10]))
 
             if opts.progress > 0 and opts.progress <= start - current_progress:
                 current_progress = start
@@ -173,31 +187,53 @@ def create_compressed_bed_file_from_bed(opts):
 
 def to_bed(chrom, limit=None):
 
+    method = 'groupby'
+
     pos = 0
     count = 0
 
     chrname = chrom.name
 
     if limit != None:
-        chrom = chrom[:10000]
+        chrom = chrom[:100000]
         pass
-    
-    for k,g in groupby(chrom):
-        l = sum(1 for x in g)
-        
-        if k == 0:
-            pos += sum(1 for x in g)
-            continue
-        
-        print "%s\t%d\t%d" % (chrname, pos, pos+l)
-        pos += l
 
-        count += 1
-        if limit != None and count >= limit: break
+    if method == 'groupby':
+        for k,g in groupby(chrom):
+            bedlen = sum(1 for x in g)
+            
+            if k == 0:
+                pos += sum(1 for x in g)
+                continue
+            
+            print "%s\t%d\t%d" % (chrname, pos, pos+bedlen)
+            pos += bedlen
+            
+            count += 1
+            if limit != None and count >= limit: break
+            pass
+        pass
+    else:
+
+        inbed = False
+        bedstart = 0
+        bedend = 0
+
+        for i,b in enumerate(chrom):
+
+            # if not in
+
+            
+            print "%s\t%d\t%d" % (chrname, pos, pos+l)
+            pos += l
+            
+            count += 1
+            if limit != None and count >= limit: break
+            pass
         pass
     
     if limit != None and count < limit:
-        # print "no elements found within 10000 bases"
+        # print "no elements found within 100000 bases"
         pass
 
     pass
@@ -227,10 +263,15 @@ def peek_compressed_file(opts):
 
         for chrom in f.values():
 
+            
             report_items = [chrom.name, len(chrom)] + [''.join(str(s) for s in chrom[x:x+10]) 
                                                        for x in (0, len(chrom)//2, len(chrom)-100)] + [''.join(str(chrom[x])
                                                                                                                for x in random.sample(xrange(len(chrom)), 20))]
             print "  name:%s \t len:%d \t beginning/middle/end:%s..%s..%s \t random:%s" % tuple(report_items)
+
+            start = 10500
+            end = 10560
+            print "  checking..  %s:%d-%d %s" % (chrom.name, start, end, ''.join(str(x) for x in chrom[(start if start-10<0 else start-10):end+10]))
 
             to_bed(chrom, limit=2)
 
