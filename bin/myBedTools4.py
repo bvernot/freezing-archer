@@ -5,6 +5,8 @@ import h5py
 import argparse
 from operator import itemgetter
 from itertools import groupby
+import numpy
+import tempfile
 
 import time
 start_time = time.time()
@@ -22,6 +24,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Manage binary representations of bed and fasta files.')
     parser.add_argument('-p', '--progress', type=int, default=50000000)
     parser.add_argument('-ref', '--reference-version', default='hg19')
+    parser.add_argument('-d', '--debug', action='store_true')
 
     subparsers = parser.add_subparsers(dest='func')
 
@@ -52,10 +55,14 @@ def parse_arguments():
     create_bed_file_parser = subparsers.add_parser('create-bed', parents = [infile_bed_parser, compression_parser, bed_parser])
     cat_file_parser = subparsers.add_parser('cat', parents = [binary_infile_parser])
     peek_file_parser = subparsers.add_parser('peek', parents = [binary_infile_parser])
+    test_file_parser = subparsers.add_parser('test', parents = [binary_infile_parser])
     
     opts = parser.parse_args()
     return opts
 
+
+def sorted_chroms(f):
+    return sorted(f.values(), key = lambda x : x.name)
 
 
 def create_compressed_sequence_file_from_fasta(opts):
@@ -127,7 +134,7 @@ def create_compressed_bed_file_from_bed(opts):
     f.attrs['ref_version'] = opts.reference_version
 
     ## make sure all chromosomes are defined..
-    for chrname, num_bases in refDefinitions.chr_lens.items():
+    for chrname, num_bases in sorted(refDefinitions.chr_lens.items()):
         print "Initializing chromosome %s, with %d bases" % (chrname, num_bases)
         cdef = f.create_dataset(chrname, (num_bases,), dtype='b', compression='gzip', compression_opts=opts.compression_level, fillvalue=0)
         # cdef[:] = 0
@@ -185,25 +192,32 @@ def create_compressed_bed_file_from_bed(opts):
 
 
 
-def to_bed(chrom, limit=None):
+def to_bed(chrom, limit=None, pad=''):
 
     method = 'groupby'
+    #method = 'x'
 
     pos = 0
     count = 0
 
-    chrname = chrom.name
-
+    chrname = pad + chrom.name[1:]
+    
     if limit != None:
-        chrom = chrom[:100000]
+        chrom_bases = chrom[:100000]
+    else:
+        # this is ad-hoc, and uses memory for each chromosome, but it's a lot faster than scanning through the hdf5 file using groupby
+        chrom_bases = chrom[:]
+        # this seemed promising, but it also seemed (from the system profiler) to use ~2x more peak memory, and it takes the same amount of time
+        # chrom_bases = numpy.array(chrom)
         pass
 
     if method == 'groupby':
-        for k,g in groupby(chrom):
+
+        for k,g in groupby(chrom_bases):
             bedlen = sum(1 for x in g)
-            
+
             if k == 0:
-                pos += sum(1 for x in g)
+                pos += bedlen
                 continue
             
             print "%s\t%d\t%d" % (chrname, pos, pos+bedlen)
@@ -213,27 +227,33 @@ def to_bed(chrom, limit=None):
             if limit != None and count >= limit: break
             pass
         pass
+
     else:
 
+        ## this version is 15x slower.. but might be worth it in cython?
         inbed = False
         bedstart = 0
         bedend = 0
 
-        for i,b in enumerate(chrom):
+        for i in xrange(len(chrom_bases)):
 
-            # if not in
+            if not inbed and chrom_bases[i] == 1:
+                inbed = True
+                bedstart = i
+                continue
 
-            
-            print "%s\t%d\t%d" % (chrname, pos, pos+l)
-            pos += l
-            
-            count += 1
-            if limit != None and count >= limit: break
+            if inbed and chrom_bases[i] == 0:
+                print "%s\t%d\t%d" % (chrname, bedstart, i)
+                inbed = False
+                count += 1
+                if limit != None and count >= limit: break
+                continue
+
             pass
         pass
     
     if limit != None and count < limit:
-        # print "no elements found within 100000 bases"
+        # print pad + "no elements found within 100000 bases"
         pass
 
     pass
@@ -254,32 +274,58 @@ def peek_compressed_file(opts):
 
     if f.attrs['filetype'] == 'seq':
         
-        for chrom in f.values():
+        for chrom in sorted_chroms(f):
             report_items = [chrom.name, len(chrom)] + [''.join(chrom[x:x+10]) for x in (0, len(chrom)//2, len(chrom)-100)] + [''.join(chrom[x] for x in random.sample(xrange(len(chrom)), 20))]
             print "  name:%s \t len:%d \t beginning/middle/end:%s..%s..%s \t random:%s" % tuple(report_items)
             pass
         
     elif f.attrs['filetype'] == 'bed':
 
-        for chrom in f.values():
+        for chrom in sorted_chroms(f):
 
-            
-            report_items = [chrom.name, len(chrom)] + [''.join(str(s) for s in chrom[x:x+10]) 
-                                                       for x in (0, len(chrom)//2, len(chrom)-100)] + [''.join(str(chrom[x])
-                                                                                                               for x in random.sample(xrange(len(chrom)), 20))]
-            print "  name:%s \t len:%d \t beginning/middle/end:%s..%s..%s \t random:%s" % tuple(report_items)
+            report_items = [chrom.name[1:], len(chrom)] + [''.join(str(s) for s in chrom[x:x+10])
+                                                           for x in (0, len(chrom)//2, len(chrom)-100)] + [''.join(str(chrom[x])
+                                                                                                                   for x in random.sample(xrange(len(chrom)), 20))]
+            print " name:%s \t len:%d \t beginning/middle/end:%s..%s..%s \t random:%s" % tuple(report_items)
 
-            start = 10500
-            end = 10560
-            print "  checking..  %s:%d-%d %s" % (chrom.name, start, end, ''.join(str(x) for x in chrom[(start if start-10<0 else start-10):end+10]))
-
-            to_bed(chrom, limit=2)
+            to_bed(chrom, limit=2, pad = '   ')
 
             pass
         pass
 
 
     return
+
+
+def cat_compressed_file(opts):
+    
+    ## open hdf5 dataset
+    f = h5py.File(opts.infile, 'r')
+    
+    if not 'version' in f.attrs:
+        print "Are you sure this is the correct file?  It doesn't contain a version number.."
+        sys.exit(-1)
+        pass
+    
+    if opts.debug: print "Version:", f.attrs['version']
+    if opts.debug: print "File contains %d chromosomes:" % len(f)
+
+    if f.attrs['filetype'] == 'seq':
+        print "The cat function is not currently defined for sequence files.  Try peek."
+        sys.exit(-1)
+        
+    elif f.attrs['filetype'] == 'bed':
+
+        for chrom in sorted_chroms(f):
+            to_bed(chrom, limit=30)
+            # sys.exit()
+            pass
+        pass
+
+
+    return
+
+
 
 
 class refDefinitions:
@@ -314,13 +360,86 @@ class refDefinitions:
 
 
 class myBedTools:
-
+    
     version_str = '0.1'
+    
+    def __init__(self, filename = None, invert = False, ref_version = 'hg19', initialize = True):
+        
+        self.filename = filename
+        self.ref_version = ref_version
+        
+        if self.filename != None:
+            self.hdf5_file = h5py.File(self.filename, 'r')
+        else:
+            self.tempfilehandle = tempfile.NamedTemporaryFile()
+            self.filename = self.tempfilehandle.name
+            self.hdf5_file = h5py.File(self.filename, 'w')
+            pass
+        
+        return
+
+
+    def check_compatible(self, bedfile, force = True):
+
+        if self.ref_version != bedfile.ref_version:
+            print "Hey these aren't the same reference!"
+            print self.ref_version, bedfile.ref_version
+            if force: sys.exit(-1)
+            return False
+
+        for chrom_name in bedfile.sorted_chrom_names():
+            if chrom_name not in self.sorted_chrom_names():
+                print "can't find %s in first file, making it" % chrom_name
+                self.hdf5_file.create_dataset(chrom_name,
+                                              bedfile.hdf5_file[chrom_name].shape,
+                                              dtype = bedfile.hdf5_file[chrom_name].dtype,
+                                              compression = bedfile.hdf5_file[chrom_name].compression,
+                                              compression_opts = bedfile.hdf5_file[chrom_name].compression_opts,
+                                              fillvalue = 0)
+                # data = bedfile.hdf5_file[chrom_name])
+            # self.hdf5_file[chrom_name] = bedfile.hdf5_file[chrom_name][:]
+            pass
+        
+        return True
+
+
+    def __ior__(self, bedfile):
+
+        self.check_compatible(bedfile)
+        
+        for chrom_name in bedfile.sorted_chrom_names():
+            self.hdf5_file[chrom_name][:] = self.hdf5_file[chrom_name][:] | bedfile.hdf5_file[chrom_name][:]
+            pass
+        
+        return self
+
+
+    def sorted_chroms(self):
+        return sorted(self.hdf5_file.values(), key = lambda x : x.name)
+
+    def sorted_chrom_names(self):
+        return sorted(c.name[1:] for c in self.hdf5_file.values())
+    
 
     pass
 
 
+def test_compressed_file(opts):
+    
+    f0 = myBedTools()
+    f1 = myBedTools(opts.infile)
+    f2 = myBedTools(opts.infile)
 
+    print f1.sorted_chrom_names()
+    print f2.sorted_chrom_names()
+    
+    # print f0.hdf5_file['chr1'][:200]
+
+    f0 |= f2
+
+    print f0.hdf5_file['chr1'][:200]
+
+    return
     
 if __name__ == "__main__":
 
@@ -334,6 +453,8 @@ if __name__ == "__main__":
         cat_compressed_file(opts)
     elif opts.func == 'peek':
         peek_compressed_file(opts)
+    elif opts.func == 'test':
+        test_compressed_file(opts)
         pass
 
     
