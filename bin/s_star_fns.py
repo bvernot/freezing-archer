@@ -321,23 +321,30 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
         n_haps2 = sum(ind1_hap2[i] for i in s_star_snps)
         all_haps = (ind1_hap1[i] + ind1_hap2[i]*2 for i in s_star_snps)
 
+        ## currently depreciated..
         if opts.match_pval_table != None:
             match_pval = calc_match_pval(chrom, winstart, winend, ind1_snps_all, opts)
         else:
             match_pval = (None,)
             pass
 
-        s_start = ind1_snps[min(s_star_snps)]['pos']
-        s_stop  = ind1_snps[max(s_star_snps)]['pos']
-        (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, ind, subset_start = s_start, subset_end = s_stop)
-        # print ind, s_start, s_stop, match_pvals3
-        # print ind, match_pct3
+        if len(s_star_snps) >= 2:
+            s_start = ind1_snps[min(s_star_snps)]['pos']
+            s_stop  = ind1_snps[max(s_star_snps)]['pos']
+            (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, ind, subset_start = s_start, subset_end = s_stop)
+            # print ind, s_start, s_stop, match_pvals3
+            # print ind, match_pct3
+        else:
+            match_pvals3 = ['NA', 'NA'] * opts.num_samples
+            match_pct3   = ['NA', 'NA'] * opts.num_samples
+            pass
 
         if opts.first_line:
             print '\t'.join(('chrom', 'winstart', 'winend', 'n_snps', 'n_ind_snps',
                              'ind_id',
                              'pop',
                              's_star',
+                             'num_s_star_snps',
                              's_star_snps',
                              'hap_1_window_pval', 'hap_2_window_pval',
                              'hap_1_window_match_pct', 'hap_2_window_match_pct',
@@ -353,6 +360,7 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
                                          opts.get_id_from_sample_index(ind),
                                          opts.get_pop_from_sample_index(ind),
                                          s_star, 
+                                         len(s_star_snps),
                                          ','.join(str(ind1_pos[i]) for i in s_star_snps) if len(s_star_snps) > 0 else '.',
                                          match_pvals2[ind*2], match_pvals2[ind*2+1],
                                          match_pct2[ind*2], match_pct2[ind*2+1],
