@@ -3,10 +3,9 @@ import sys, traceback, os, gzip
 from array import array
 from bitarray import bitarray
 import bitarray as bitarray_m
-sys.path.append('/net/akey/vol1/home/bvernot/tishkoff/mapped_snps/')
-sys.path.append('/net/akey/vol1/home/bvernot/tishkoff/metrics/')
-from region_stats import region_type_stats
-from BaseLookup import BaseLookup
+# sys.path.append('/net/akey/vol1/home/bvernot/tishkoff/mapped_snps/')
+# sys.path.append('/net/akey/vol1/home/bvernot/tishkoff/metrics/')
+# from region_stats import region_type_stats
 import fileinput
 from operator import itemgetter
 
@@ -50,6 +49,7 @@ class myBedTools:
         self.factor = 1
         if output_type == self.binaryseqfilegenome: self.factor = 3
 
+        from BaseLookup import BaseLookup
         if ref_version == 'b37':
             self.genome_len = BaseLookup.chr_lens['genome']
             self.chr_offset = BaseLookup.chr_offset
@@ -66,6 +66,7 @@ class myBedTools:
             self.chr_lens = BaseLookup.chr_lens_tair10
             self.chrs = BaseLookup.chrs_tair10
             pass
+
         sys.stderr.write('Creating bitarray of length %d\n' % (self.genome_len * self.factor))
         self.bases = bitarray(self.genome_len * self.factor)
         sys.stderr.write('Initializing bitarray.. ')
