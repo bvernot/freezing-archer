@@ -297,19 +297,12 @@ def vcf_to_genotypes_windowed(vcf_file, winlen, winstep, vcf_ind_pop_file, opts,
 
 
 
-
-def read_1kg_ind_pop_file(f, opts):
-
-    # sample  pop     super_pop       gender
-    # HG00096 GBR     EUR     male
-    # HG00097 GBR     EUR     female
-    # HG00099 GBR     EUR     female
-
-    header = f.readline()
+def process_ind_pop_mapping(opts, ind_pop_mapping):
     sample_to_pop = {}
     sample_to_superpop = {}
-    opts.all_pops = set()
-    opts.all_superpops = set()
+
+    all_pops = set()
+    all_superpops = set()
     opts.reference_individuals = set(opts.reference_individuals)
     opts.target_individuals = set(opts.target_individuals)
     opts.exclude_individuals = set(opts.exclude_individuals)
@@ -317,12 +310,12 @@ def read_1kg_ind_pop_file(f, opts):
     ## go through each line in the ind_pop file, and add the individual's ID (i.e., NA12078) to
     ##  opts.target_individuals, etc, if the pop or superpop matches
     pop_file_ind_id_order = []
-    for line in f:
-        (sample, pop, superpop, _) = line.strip().split()
+    for sample, pop, superpop in ind_pop_mapping:
+
         sample_to_pop[sample] = pop
         sample_to_superpop[sample] = superpop
-        opts.all_pops.add(pop)
-        opts.all_superpops.add(superpop)
+        all_pops.add(pop)
+        all_superpops.add(superpop)
         pop_file_ind_id_order.append(sample)
 
         if pop      in opts.reference_populations: opts.reference_individuals.add(sample)
@@ -362,6 +355,33 @@ def read_1kg_ind_pop_file(f, opts):
 
     opts.get_id_from_sample_index = lambda ind: sample_ids[ind]
     opts.get_pop_from_sample_index = lambda ind: sample_to_pop[sample_ids[ind]]
+
+    return
+
+
+def read_1kg_ind_pop_file(f, opts):
+
+    """
+    Sets up important options, like the indices of reference and target individuals, ind to pop mappings, etc.
+    Necessary to set:
+
+    Indexes to the original VCF sample order:
+    opts.reference_individuals_indexed_to_orig_file
+    opts.target_individuals_indexed_to_orig_file
+    opts.exclude_individuals_indexed_to_orig_file
+
+    """
+
+    # sample  pop     super_pop       gender
+    # HG00096 GBR     EUR     male
+    # HG00097 GBR     EUR     female
+    # HG00099 GBR     EUR     female
+
+    header = f.readline()
+
+    ind_pop_mapping = [l.strip().split()[:3] for l in f.readlines()]
+
+    process_ind_pop_mapping(opts, ind_pop_mapping)
     
     return# (sample_to_pop, sample_to_superpop)
 

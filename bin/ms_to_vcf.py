@@ -43,7 +43,7 @@ num_inds = nsam // 2
 #setattr(opts, 'num_inds', int(nsam) // 2)
 
 if nsam != 2 * num_inds:
-    sys.stderr.write('Not an even number of chromosomes - dropping last haplotype.')
+    sys.stderr.write('Not an even number of chromosomes - dropping last haplotype.\n')
     pass
 
 ## print header

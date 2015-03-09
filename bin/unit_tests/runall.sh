@@ -1,3 +1,5 @@
+# set -e
+
 # echo
 # echo
 # echo
@@ -37,7 +39,7 @@ python  ../windowed_calculations.py \
 #    | sort -k1,1 -k2,3n -k6,6 \
 
 
-cat $ofile_current | transpose | awk '{print NR, $0}' > $ofile_current_cols
+cat $ofile_current | transpose  > $ofile_current_cols
 
 # awk -OFS '\t' '{print $1, $2, $3, $4, $5, $6, $7, $8, $9, $11, $12, $15, $13, $14, $10}' test_files/science_supplement_example.vcf > test_files/science_supplement_example.vcf.shuf_cols
 
@@ -57,7 +59,7 @@ python  ../windowed_calculations.py \
 #    | sort -k1,1 -k2,3n -k6,6 \
 
 
-cat $ofile_current_shuf | transpose | awk '{print NR, $0}' > $ofile_current_shuf_cols
+cat $ofile_current_shuf | transpose  > $ofile_current_shuf_cols
 
 
 echo

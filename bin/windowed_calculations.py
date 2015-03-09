@@ -42,7 +42,7 @@ parser = argparse.ArgumentParser(description='Calculate S*')
 
 parser.add_argument('-vcf', '--vcf-file', required=False, type=argparse.FileType('r'), default=None)
 parser.add_argument('-vcfz', '--gzip-vcf-file', required=False, default=None)
-parser.add_argument('-indf', '--ind-pop-file', required=True, type=argparse.FileType('r'))
+parser.add_argument('-indf', '--ind-pop-file', required=False, type=argparse.FileType('r'), default=None)
 parser.add_argument('-ptable', '--match-pval-table', type=argparse.FileType('rb'), default=None, nargs='+')
 parser.add_argument('-pfile', '--pickle-file-for-match-pvals', type=argparse.FileType('wb'), default=None)
 parser.add_argument('-winlen', '--window-length', type=int, default=50000)
@@ -61,6 +61,9 @@ parser.add_argument('-tag-ids', '--tag-ids', default=[], nargs='+')
 parser.add_argument('-tags', '--tags', default=[], nargs='+')
 parser.add_argument('-d', '--debug', action='store_true')
 parser.add_argument('-ms', '--vcf-is-ms-file', action='store_true')
+parser.add_argument('-mspops', '--ms-pop-sizes', default=None, nargs='+', type=int, help='This is identical to the -I argument for ms. WRT target and reference populations, numbering starts from 0.')
+parser.add_argument('-msinds', '--ms-num-diploid-inds', default=None, type=int, help='The number of diploid individuals considered. This is important because we sometimes simulate a single archaic chromosome.')
+parser.add_argument('-msarc', '--ms-archaic-chromosomes', default=None, nargs='+', type=int, help='The archaic chromosomes, if simulated.')
 parser.add_argument('-illumina-chrom', '--vcf-has-illumina-chrnums', action='store_true')
 parser.add_argument('-neandvcf', '--neand-vcf', action = VCFFileAction, required = False, help = 'VCF file listing Neand sites')
 parser.add_argument('-ancbsg', '--ancestral-bsg', action = BinarySeqFileAction, required = False, help = 'BSG file listing ancestral sites (CAnc or just chimp)')
@@ -107,11 +110,28 @@ if opts.vcf_file == None and opts.gzip_vcf_file == None:
     print "Require at least one vcf file option."
     sys.exit(-1)
     pass
-
-if opts.vcf_file != None and opts.gzip_vcf_file != None:
+elif opts.vcf_file != None and opts.gzip_vcf_file != None:
     print "Require exactly one vcf file option."
     sys.exit(-1)
     pass
+
+if not opts.vcf_is_ms_file and opts.ind_pop_file == None:
+    print "VCF file requires --ind-pop-file."
+    sys.exit(-1)
+    
+elif opts.vcf_is_ms_file and opts.ms_pop_sizes == None:
+    print "ms file requires --ms-pop-sizes."
+    sys.exit(-1)
+
+elif opts.vcf_is_ms_file and opts.ms_num_diploid_inds == None:
+    print "ms file requires --ms-num-diploid-inds."
+    sys.exit(-1)
+    
+elif opts.vcf_is_ms_file and opts.ms_archaic_chromosomes == None:
+    print "ms file requires --ms-archaic-chromosomes."
+    sys.exit(-1)
+    pass
+    
 
 if opts.gzip_vcf_file != None:
     opts.vcf_file = gzip.open(opts.gzip_vcf_file)
