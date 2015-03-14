@@ -82,7 +82,7 @@ def process_vcf_line_to_genotypes(line, opts):
         return None
 
     snp_d['target'] = '0|1' in t_gt or '1|0' in t_gt or '1|1' in t_gt
-    # I DO NOT UNDERSTAND WHAT I WAS GETTING AT HERE...
+    # I DO NOT UNDERSTAND WHAT I WAS GETTING AT HERE (the commented line)...
     # snp_d['reference'] = not('0|0' in r_gt and len(r_gt) == 1)
     snp_d['reference'] = '0|1' in r_gt or '1|0' in r_gt or '1|1' in r_gt
 
@@ -131,37 +131,37 @@ def process_vcf_line_to_genotypes(line, opts):
 
     snp_d['sfs_target'] = sum(genotypes[:opts.num_target])
     snp_d['sfs_reference'] = sum(genotypes[opts.num_target:opts.num_reference])
-    if opts.neand_vcf != None:
+    if opts.archaic_vcf != None:
         if flip_for_derived:
             # if the ref is derived (alt is ancestral), then check to see if neand has reference
-            snp_d['arc_match'] = opts.neand_vcf.has_ref(snp_d['chrom'], snp_d['pos'])
+            snp_d['arc_match'] = opts.archaic_vcf.has_ref(snp_d['chrom'], snp_d['pos'])
         else:
             # otherwise, check to see if the alt matches neand
-            snp_d['arc_match'] = snp_d['alt'].upper() in opts.neand_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
-            # print 'debug arc_match', snp_d['pos'], snp_d['alt'].upper(), opts.neand_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
+            snp_d['arc_match'] = snp_d['alt'].upper() in opts.archaic_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
+            # print 'debug arc_match', snp_d['pos'], snp_d['alt'].upper(), opts.archaic_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
             pass
-        snp_d['arc_genotype'] = opts.neand_vcf.get_genotype_one_based(snp_d['chrom'], snp_d['pos'], flip_for_derived)
+        snp_d['arc_genotype'] = opts.archaic_vcf.get_genotype_one_based(snp_d['chrom'], snp_d['pos'], flip_for_derived)
 
         if opts.ancestral_bsg != None:
             snp_d['arc_is_derived'] = snp_d['arc_match']
             # if flip_for_derived:
-            #     snp_d['arc_is_derived'] = opts.neand_vcf.has_ref(snp_d['chrom'], snp_d['pos'])
+            #     snp_d['arc_is_derived'] = opts.archaic_vcf.has_ref(snp_d['chrom'], snp_d['pos'])
             # else:
-            #     snp_d['arc_is_derived'] = snp_d['alt'].upper() in opts.neand_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
+            #     snp_d['arc_is_derived'] = snp_d['alt'].upper() in opts.archaic_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
             #     pass
             pass
             
         if opts.debug: print "neand match", snp_d['pos'], genotypes, snp_d['alt'].upper(), \
-                opts.neand_vcf.get_ref_one_based(snp_d['chrom'], snp_d['pos']), \
-                opts.neand_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos']), \
-                opts.neand_vcf.get_bases_one_based(snp_d['chrom'], snp_d['pos']), \
-                opts.neand_vcf.has_genotype_at_site(snp_d['chrom'], snp_d['pos']), \
+                opts.archaic_vcf.get_ref_one_based(snp_d['chrom'], snp_d['pos']), \
+                opts.archaic_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos']), \
+                opts.archaic_vcf.get_bases_one_based(snp_d['chrom'], snp_d['pos']), \
+                opts.archaic_vcf.has_genotype_at_site(snp_d['chrom'], snp_d['pos']), \
                 'DEBUG', \
                 'ARCHAIC_MATCH' if snp_d['arc_match'] else '', \
                 'DERIVED' if flip_for_derived else '', \
-                'JACKPOT' if flip_for_derived and snp_d['arc_match'] and not opts.neand_vcf.has_ref(snp_d['chrom'], snp_d['pos']) else '', \
+                'JACKPOT' if flip_for_derived and snp_d['arc_match'] and not opts.archaic_vcf.has_ref(snp_d['chrom'], snp_d['pos']) else '', \
                 'MINI_JACKPOT' if flip_for_derived and snp_d['arc_match'] else '', \
-                'NEAND_IS_HET' if len(opts.neand_vcf.get_bases_one_based(snp_d['chrom'], snp_d['pos'])) == 2 else 'NEAND_IS_HOM'
+                'NEAND_IS_HET' if len(opts.archaic_vcf.get_bases_one_based(snp_d['chrom'], snp_d['pos'])) == 2 else 'NEAND_IS_HOM'
                 
         pass
 
@@ -317,6 +317,8 @@ def process_ind_pop_mapping(opts, ind_pop_mapping):
         all_pops.add(pop)
         all_superpops.add(superpop)
         pop_file_ind_id_order.append(sample)
+
+        if opts.debug: print 'process_ind_pop_mapping', sample, pop, superpop, opts.target_populations
 
         if pop      in opts.reference_populations: opts.reference_individuals.add(sample)
         if superpop in opts.reference_populations: opts.reference_individuals.add(sample)

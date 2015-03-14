@@ -26,7 +26,7 @@ class missingdict(defaultdict):
 
 class vcf_class(object):
 
-    geno_map = {'0/0':0, '0/1':1, '1/0':1, '1/1':2, 
+    geno_map = {'0/0':0, '0/1':1, '1/0':1, '1/1':2,
                 '0|0':0, '0|1':1, '1|0':1, '1|1':2}
 
     def __init__(self, vcf):
@@ -59,54 +59,67 @@ class vcf_class(object):
     pass
 
 class VCFFileAction(argparse.Action):
-    def __call__(self, parser, namespace, filename, option_string=None):
-        if filename.endswith('.gz'):
-            vcffile = gzip.open(filename)
-        else:
-            vcffile = open(filename, 'r')
-            pass
+    def __call__(self, parser, namespace, filelist, option_string=None):
 
-        #vcf = defaultdict(lambda : ['N'])
-        vcf = {}
-        sys.stderr.write("Reading VCF file %s..\n" % filename)
-        c = 0
-        warn_strip_chrom = False
-        for line in vcffile:
-            if line.strip().startswith('#'): continue
-            try:
-                [chrom, pos, _, ref, alt, qual, _, _, _, gt_info] = line.strip().split()
-            except ValueError:
-                print "Too many lines in VCF?  Expecting one individual (9 columns):"
-                print line
-                sys.exit(-1)
+        vcf_list = list()
+
+        for filename in filelist:
+
+            if filename.endswith('.gz'):
+                vcffile = gzip.open(filename)
+            else:
+                vcffile = open(filename, 'r')
                 pass
-            if namespace.vcf_has_illumina_chrnums and chrom.startswith('chr'):
-                chrom = chrom[3:]
-                warn_strip_chrom = True
+            
+            # vcf = defaultdict(lambda : ['N'])
+            vcf = {}
+            sys.stderr.write("Reading VCF file %s..\n" % filename)
+            c = 0
+            warn_strip_chrom = False
+            
+            for line in vcffile:
+                if line.strip().startswith('#'): continue
+                try:
+                    [chrom, pos, _, ref, alt, qual, _, _, _, gt_info] = line.strip().split()
+                except ValueError:
+                    print "Too many lines in VCF?  Expecting one individual (9 columns):"
+                    print line
+                    sys.exit(-1)
+                    pass
+                if namespace.vcf_has_illumina_chrnums and chrom.startswith('chr'):
+                    chrom = chrom[3:]
+                    warn_strip_chrom = True
+                    pass
+                if chrom not in vcf:
+                    # assume that a site that's not in the vcf does actually have the MH ref (we're filtering out non-callable sites, so that's ok)
+                    # missingdict allows us to not add something to the defaultdict just because we query it
+                    # IF THIS IS CHANGED, ALSO CHANGE IT IN READ_MS.PY! (should be set via a function..)
+                    vcf[chrom] = missingdict(lambda : (True, '0/0', 'N', ['N']))
+                    pass
+                if int(pos) in vcf[chrom]:
+                    print "error - duplicate position in VCF file?"
+                    print chrom, pos, ref, alt
+                    print line
+                    sys.exit(-1)
+                    pass
+                gt = gt_info[:3]
+                
+                # IF THIS IS CHANGED, ALSO CHANGE IT IN READ_MS.PY! (should be set via a function..)
+                # (has_ref, genotype ('0/0', etc), ref_base, alt_bases)
+                vcf[chrom][int(pos)] = ('0' in gt, gt, ref, alt.split(','))
+                
+                # print chrom, pos, ref, alt, qual, gt_info, vcf[chrom][int(pos)]
+                c += 1
                 pass
-            if chrom not in vcf:
-                # assume that a site that's not in the vcf does actually have the MH ref (we're filtering out non-callable sites, so that's ok)
-                # missingdict allows us to not add something to the defaultdict just because we query it
-                vcf[chrom] = missingdict(lambda : (True, '0/0', 'N', ['N']))
+            sys.stderr.write(" with %d lines.\n" % c)
+            if warn_strip_chrom:
+                sys.stderr.write(" WARNING: REMOVED LEADING 'chr' FROM CHROMOSOME NAMES, TO MATCH ILLUMINA VCFS\n")
                 pass
-            if int(pos) in vcf[chrom]:
-                print "error - duplicate position in VCF file?"
-                print chrom, pos, ref, alt
-                print line
-                sys.exit(-1)
-                pass
-            gt = gt_info[:3]
-            # (has_ref, genotype ('0/0', etc), ref_base, alt_bases)
-            vcf[chrom][int(pos)] = ('0' in gt, gt, ref, alt.split(','))
-            # print chrom, pos, ref, alt, qual, gt_info, vcf[chrom][int(pos)]
-            c += 1
-            pass
-        sys.stderr.write(" with %d lines.\n" % c)
-        if warn_strip_chrom:
-            sys.stderr.write(" WARNING: REMOVED LEADING 'chr' FROM CHROMOSOME NAMES, TO MATCH ILLUMINA VCFS\n")
+
+            vcf_list.append(vcf_class(vcf))
             pass
         
-        setattr(namespace, self.dest, vcf_class(vcf))
+        setattr(namespace, self.dest, vcf_list)
         # setattr(namespace, self.dest, vcf)
         pass
     pass
@@ -176,7 +189,7 @@ def munge_regions(opts):
         
     if opts.regions != None: sys.stderr.write('Final number of bases considered (regions, exclude, intersect, etc): %s\n\n' % locale.format('%d', opts.regions.total_length(), grouping=True))
 
-    if opts.regions == None: 
+    if opts.regions == None and not opts.vcf_is_ms_file:
         sys.stderr.write('NO MASKING GIVEN - ASSUMING WHOLE GENOME IS PERFECT (hint: this is probably not a good assumption)\n\n')
         pass
 

@@ -58,16 +58,20 @@ while not line.startswith('//'):
     line = opts.msfile.readline()
     pass
 
-snps = process_ms_block_to_genotypes(opts.msfile, num_inds, opts.window_length)
+ms_block_results = process_ms_block_to_genotypes(opts.msfile, num_inds, opts.window_length, 'ms1')
 
-if opts.debug: 
-    snps = list( snps )
-    print snps
+if ms_block_results != None:
+    snps, archaic_vcfs = ms_block_results
+
+    if opts.debug: 
+        snps = list( snps )
+        print snps
+        pass
+    
+    blocknum = 1
+    for pos, gts in snps:
+        print '\t'.join(str(s) for s in ['ms%d' % blocknum, pos, '.', 'A', 'G', '.', '.', '.', 'GT'] + ['%d|%d' % (gt[0], gt[1]) for gt in gts])
+        pass
+    
     pass
-
-blocknum = 1
-for pos, gts in snps:
-    print '\t'.join(str(s) for s in ['ms%d' % blocknum, pos, '.', 'A', 'G', '.', '.', '.', 'GT'] + ['%d|%d' % (gt[0], gt[1]) for gt in gts])
-    pass
-
 

@@ -63,9 +63,10 @@ parser.add_argument('-d', '--debug', action='store_true')
 parser.add_argument('-ms', '--vcf-is-ms-file', action='store_true')
 parser.add_argument('-mspops', '--ms-pop-sizes', default=None, nargs='+', type=int, help='This is identical to the -I argument for ms. WRT target and reference populations, numbering starts from 0.')
 parser.add_argument('-msinds', '--ms-num-diploid-inds', default=None, type=int, help='The number of diploid individuals considered. This is important because we sometimes simulate a single archaic chromosome.')
-parser.add_argument('-msarc', '--ms-archaic-chromosomes', default=None, nargs='+', type=int, help='The archaic chromosomes, if simulated.')
+# parser.add_argument('-msarc', '--ms-archaic-chromosomes', default=None, nargs='+', type=int, help='The archaic chromosomes, if simulated.')
+parser.add_argument('-msarc', '--ms-archaic-populations', default=None, nargs='+', type=int, help='The archaic populations, if simulated.')
 parser.add_argument('-illumina-chrom', '--vcf-has-illumina-chrnums', action='store_true')
-parser.add_argument('-neandvcf', '--neand-vcf', action = VCFFileAction, required = False, help = 'VCF file listing Neand sites')
+parser.add_argument('-archaic-vcf', '--archaic-vcf', action = VCFFileAction, required = False, nargs='+', help = 'VCF file listing archaic sites', default=None)
 parser.add_argument('-ancbsg', '--ancestral-bsg', action = BinarySeqFileAction, required = False, help = 'BSG file listing ancestral sites (CAnc or just chimp)')
 
 parser.add_argument('-r', '--regions', action = BinaryBedFileAction, required=False, default=None, 
@@ -78,6 +79,7 @@ parser.add_argument('-o', '--output-file', type=argparse.FileType('w'), required
 
 analysis_group = parser.add_mutually_exclusive_group(required=True)
 analysis_group.add_argument('-s-star', '--s-star', action='store_true')
+analysis_group.add_argument('-test-fns', '--test-fns', action='store_true')
 analysis_group.add_argument('-match-table', '--make-arc-match-pval-tables', action='store_true')
 analysis_group.add_argument('-d-stats', '--d-statistics', action='store_true')
 
@@ -91,6 +93,7 @@ sys.stdout = opts.output_file
 
 ## select the appropriate set of functions
 ## this is.. probably poor form (runtime import selection), but it is easy!
+
 if opts.s_star:
     from s_star_fns \
         import initialize_analysis, run_window_analysis, finish_analysis
@@ -100,8 +103,15 @@ elif opts.make_arc_match_pval_tables:
 elif opts.d_statistics:
     from d_stat_fns \
         import initialize_analysis, run_window_analysis, finish_analysis
+elif opts.test_fns:
+    from test_fns \
+        import initialize_analysis, run_window_analysis, finish_analysis
     pass
 
+## THIS IS SUCH A HACK - ONLY USING ONE ARCHAIC VCF AT THIS POINT, SO IF THERE'S MORE THAN ONE...... JUST REMOVE THEM
+if opts.archaic_vcf != None:
+    opts.archaic_vcf = opts.archaic_vcf[0]
+    pass
 
 munge_regions(opts)
 
@@ -127,8 +137,8 @@ elif opts.vcf_is_ms_file and opts.ms_num_diploid_inds == None:
     print "ms file requires --ms-num-diploid-inds."
     sys.exit(-1)
     
-elif opts.vcf_is_ms_file and opts.ms_archaic_chromosomes == None:
-    print "ms file requires --ms-archaic-chromosomes."
+elif opts.vcf_is_ms_file and opts.ms_archaic_populations == None:
+    print "ms file requires --ms-archaic-populations."
     sys.exit(-1)
     pass
     
@@ -166,7 +176,7 @@ for chrom, winstart, winend, snps in read_genotype_fn(opts.vcf_file, opts.window
 
     if opts.debug or local_debug: print
     if opts.debug or local_debug: print winstart, winend, len(snps)
-    if opts.debug or local_debug: print opts.updated_ind_ids
+    if opts.debug or local_debug: print opts.target_indices
 
     if opts.debug or local_debug:
         for snp in snps:

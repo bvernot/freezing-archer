@@ -32,11 +32,11 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
 
     # get neand snps for this region
     neand_pos = [p for p in range(winstart, winend) \
-                     if opts.neand_vcf.has_var_at_site(chrom, p) and \
-                     not opts.neand_vcf.has_ref(chrom, p) and \
+                     if opts.archaic_vcf.has_var_at_site(chrom, p) and \
+                     not opts.archaic_vcf.has_ref(chrom, p) and \
                      (opts.regions == None or opts.regions.in_region_one_based(full_chrom, p))]
     # print 'neand positions', chrom, winstart, winend, \
-    #    mapped_bases, len(snps), len(opts.neand_vcf.vcf[chrom]), len(neand_pos), neand_pos, [p for p in range(winstart, winend) if opts.neand_vcf.has_var_at_site(chrom, p)]
+    #    mapped_bases, len(snps), len(opts.archaic_vcf.vcf[chrom]), len(neand_pos), neand_pos, [p for p in range(winstart, winend) if opts.archaic_vcf.has_var_at_site(chrom, p)]
 
     for ind in range(len(opts.updated_ind_ids)):
 

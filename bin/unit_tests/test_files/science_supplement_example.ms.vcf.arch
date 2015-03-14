@@ -1,0 +1,21 @@
+#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  i1 i2 i3 i4 i5 i6
+ms1   2000    .       A       T       .       .       .       TT   1|1
+ms1   2309    .       A       T       .       .       .       TT   0|1
+ms1   7879    .       A       T       .       .       .       TT   0|0
+ms1   11484   .       A       T       .       .       .       TT   0|0
+ms1   16249   .       A       T       .       .       .       TT   1|1
+ms1   17324   .       A       T       .       .       .       TT   0|0
+ms1   19064   .       A       T       .       .       .       TT   0|0
+ms1   19124   .       A       T       .       .       .       TT   0|0
+ms1   23559   .       A       T       .       .       .       TT   1|1
+ms1   25354   .       A       T       .       .       .       TT   0|1
+ms1   26654   .       A       T       .       .       .       TT   1|1
+ms1  29724   .       A       T       .       .       .       TT   1|1
+ms1  30769   .       A       T       .       .       .       TT   0|0
+ms1  31319   .       A       T       .       .       .       TT   0|0
+ms1  37199   .       A       T       .       .       .       TT   0|1
+ms1  38009   .       A       T       .       .       .       TT   0|0
+ms1  39444   .       A       T       .       .       .       TT   0|0
+ms1  40809   .       A       T       .       .       .       TT   1|1
+ms1  45079   .       A       T       .       .       .       TT   1|1
+ms1  48989   .       A       T       .       .       .       TT   0|0

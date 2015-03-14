@@ -88,8 +88,8 @@ def calc_match_pval_from_genome_tables(chrom, winstart, winend, ind_snps, opts):
 
     # get neand hom snps for this region - i.e., we're only looking for sites that have only non-ref
     neand_pos = [p for p in range(winstart, winend) \
-                     if opts.neand_vcf.has_var_at_site(chrom, p) and \
-                     not opts.neand_vcf.has_ref(chrom, p) and \
+                     if opts.archaic_vcf.has_var_at_site(chrom, p) and \
+                     not opts.archaic_vcf.has_ref(chrom, p) and \
                      (opts.regions == None or opts.regions.in_region_one_based(full_chrom, p))]
 
     # get the number of sites in the region (for this ind, and for neand)
@@ -185,13 +185,13 @@ def calc_local_match_pval(chrom, winstart, winend, snps, opts, ind_indices = Non
 
     # get neand hom snps for this region - i.e., we're only looking for sites that have only non-ref
     neand_pos = [p for p in range(subset_start, subset_end+1) \
-                     if opts.neand_vcf.has_var_at_site(chrom, p) and \
-                     not opts.neand_vcf.has_ref(chrom, p) and \
+                     if opts.archaic_vcf.has_var_at_site(chrom, p) and \
+                     not opts.archaic_vcf.has_ref(chrom, p) and \
                      (opts.regions == None or opts.regions.in_region_one_based(full_chrom, p))]
 
     # print neand_pos
     # for p in [2000, 2001, 2309, 7879, 16249]:
-    #     print '%6d ref=%r var=%r geno=%s' % (p, opts.neand_vcf.has_ref(chrom, p), opts.neand_vcf.has_var_at_site(chrom, p))
+    #     print '%6d ref=%r var=%r geno=%s' % (p, opts.archaic_vcf.has_ref(chrom, p), opts.archaic_vcf.has_var_at_site(chrom, p))
     #     pass
 
     # save two spots for each individual (one for each haplotype)
