@@ -115,7 +115,7 @@ def process_ms_block_to_genotypes(ms_file, num_inds, window_length, ms_chr, arch
         arc_vcfs.append(vcf)
         pass
 
-    return [itertools.izip(positions, itertools.izip(*ind_genotypes)), arc_vcfs]
+    return [itertools.ifilter(lambda x: sum([item for sublist in x[1] for item in sublist]) > 0, itertools.izip(positions, itertools.izip(*ind_genotypes))), arc_vcfs]
 
 
 def process_ms_block_to_snp_list(ms_file, opts):
@@ -143,9 +143,15 @@ def process_ms_block_to_snp_list(ms_file, opts):
 
     ms_snp_iterator, archaic_vcfs = genotype_results
     
-    print "WARNING, ONLY TAKING ONE ARCHAIC AT THIS POINT"
-    opts.archaic_vcf = vcf_class(archaic_vcfs[0])
-    print opts.target_individuals_indexed_to_orig_file
+    if len(archaic_vcfs) > 0:
+        if len(archaic_vcfs) > 1: sys.stderr.write( "WARNING, ONLY TAKING ONE ARCHAIC AT THIS POINT\n" )
+        opts.archaic_vcf = vcf_class(archaic_vcfs[0])
+    else:
+        opts.archaic_vcf = vcf_class({})
+        opts.archaic_vcf.init_chrom(opts.current_ms_chrom)
+        pass
+
+    # print opts.target_individuals_indexed_to_orig_file
     
     for snp_num, (pos, genotypes) in enumerate(ms_snp_iterator):
 
@@ -158,8 +164,8 @@ def process_ms_block_to_snp_list(ms_file, opts):
         e_gt = list(itertools.imap(lambda j : genotypes[j], opts.exclude_individuals_indexed_to_orig_file))
         genotypes = t_gt + r_gt
 
-        print t_gt
-        print r_gt
+        # print t_gt
+        # print r_gt
 
         snp_d['ref'] = '0'
         snp_d['alt'] = '1'
@@ -177,7 +183,7 @@ def process_ms_block_to_snp_list(ms_file, opts):
         
         pass
 
-    print snps
+    # print snps
     return snps
 
 
@@ -245,8 +251,8 @@ def read_ms_header(ms_file, opts):
 
     pop_list_chr = list(itertools.chain.from_iterable([i for _ in range(x)] for i,x in enumerate(opts.ms_pop_sizes[1:])))
     pop_mapping = {i:p for i,p in enumerate(pop_list_chr)}
-    print pop_list_chr
-    print pop_mapping
+    # print pop_list_chr
+    # print pop_mapping
     ind_list = ['i%d' % i for i in range(opts.ms_num_diploid_inds)]
 
     ## check that the archaic population(s) are in the population list
@@ -285,17 +291,19 @@ def read_ms_header(ms_file, opts):
 
     ## check that a) the archaic chromosomes are at the end, and b) that all other populations have diploid individuals (even number of chrs)
     pop_indices = range(opts.ms_pop_sizes[0])
-    if sorted(pop_indices[-len(opts.ms_archaic_populations):]) != sorted(opts.ms_archaic_populations):
+    if len(opts.ms_archaic_populations) > 0 and sorted(pop_indices[-len(opts.ms_archaic_populations):]) != sorted(opts.ms_archaic_populations):
         print "Archaic populations must be the last simulated populations (may no longer actually be important..)."
         print "Archaic pops:", opts.ms_archaic_populations
         print "Specified pops:", pop_indices
+        print sorted(pop_indices[-len(opts.ms_archaic_populations):])
+        print sorted(opts.ms_archaic_populations)
         sys.exit(-1)
         pass
 
-    print pop_indices[:len(opts.ms_archaic_populations)]
+    # print pop_indices[:len(opts.ms_archaic_populations)]
     
     problematic_pops = [(pop_idx, pop_size) for pop_idx, pop_size in enumerate(opts.ms_pop_sizes[1:-len(opts.ms_archaic_populations)]) if pop_size % 2 != 0]
-    print "problematic_pops", problematic_pops
+    # print "problematic_pops", problematic_pops
 
     if len(problematic_pops) != 0:
         print "Non-archaic populations must be diploid.  Number of chromosomes per population: %r" % opts.ms_pop_sizes[1:-len(opts.ms_archaic_populations)]
@@ -313,9 +321,9 @@ def read_ms_header(ms_file, opts):
     ## I'M NOT SURE HOW ROBUST THIS IS - FOR ONE, IT REMOVES POPS WITH ONE CHR
     pop_list = list(itertools.chain.from_iterable([str(i) for _ in range(x//2)] for i,x in enumerate(opts.ms_pop_sizes[1:])))
 
-    print pop_list
-    print ind_list
-    print list(itertools.izip(ind_list, pop_list, pop_list))
+    # print pop_list
+    # print ind_list
+    # print list(itertools.izip(ind_list, pop_list, pop_list))
     ind_pop_mapping = list(itertools.izip(ind_list, pop_list, pop_list))
 
 

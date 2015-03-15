@@ -64,7 +64,7 @@ parser.add_argument('-ms', '--vcf-is-ms-file', action='store_true')
 parser.add_argument('-mspops', '--ms-pop-sizes', default=None, nargs='+', type=int, help='This is identical to the -I argument for ms. WRT target and reference populations, numbering starts from 0.')
 parser.add_argument('-msinds', '--ms-num-diploid-inds', default=None, type=int, help='The number of diploid individuals considered. This is important because we sometimes simulate a single archaic chromosome.')
 # parser.add_argument('-msarc', '--ms-archaic-chromosomes', default=None, nargs='+', type=int, help='The archaic chromosomes, if simulated.')
-parser.add_argument('-msarc', '--ms-archaic-populations', default=None, nargs='+', type=int, help='The archaic populations, if simulated.')
+parser.add_argument('-msarc', '--ms-archaic-populations', default=[], nargs='+', type=int, help='The archaic populations, if simulated.')
 parser.add_argument('-illumina-chrom', '--vcf-has-illumina-chrnums', action='store_true')
 parser.add_argument('-archaic-vcf', '--archaic-vcf', action = VCFFileAction, required = False, nargs='+', help = 'VCF file listing archaic sites', default=None)
 parser.add_argument('-ancbsg', '--ancestral-bsg', action = BinarySeqFileAction, required = False, help = 'BSG file listing ancestral sites (CAnc or just chimp)')
@@ -137,10 +137,10 @@ elif opts.vcf_is_ms_file and opts.ms_num_diploid_inds == None:
     print "ms file requires --ms-num-diploid-inds."
     sys.exit(-1)
     
-elif opts.vcf_is_ms_file and opts.ms_archaic_populations == None:
-    print "ms file requires --ms-archaic-populations."
-    sys.exit(-1)
-    pass
+# elif opts.vcf_is_ms_file and opts.ms_archaic_populations == None:
+#     print "ms file requires --ms-archaic-populations."
+#     sys.exit(-1)
+#     pass
     
 
 if opts.gzip_vcf_file != None:

@@ -275,7 +275,12 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
     if opts.debug: print 'starting window', chrom, winstart, winend, 'NUM SNPS:', len(snps)
     if len(snps) <= 2: return
 
-    (match_pvals2, match_pct2, ref_nones) = calc_local_match_pval(chrom, winstart, winend, snps, opts)
+    if opts.archaic_vcf != None:
+        (match_pvals2, match_pct2, ref_nones) = calc_local_match_pval(chrom, winstart, winend, snps, opts)
+    else:
+        match_pvals2 = ['NA', 'NA'] * opts.num_samples
+        match_pct2   = ['NA', 'NA'] * opts.num_samples
+        pass
 
     # # print snps[0]['pos'], snps[-1]['pos']
     # (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, 0, subset_start = 2300, subset_end = 48988)
@@ -328,7 +333,7 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
             match_pval = (None,)
             pass
 
-        if len(s_star_snps) >= 2:
+        if len(s_star_snps) >= 2 and opts.archaic_vcf != None:
             s_start = ind1_snps[min(s_star_snps)]['pos']
             s_stop  = ind1_snps[max(s_star_snps)]['pos']
             (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, ind, subset_start = s_start, subset_end = s_stop)

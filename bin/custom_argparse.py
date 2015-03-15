@@ -33,6 +33,10 @@ class vcf_class(object):
         self.vcf = vcf
         return
 
+    def init_chrom(self, chrom):
+        self.vcf[chrom] = missingdict(lambda : (True, '0/0', 'N', ['N']))
+        pass
+
     def has_var_at_site(self, chrom, pos):
         return pos in self.vcf[chrom]
 
@@ -94,7 +98,7 @@ class VCFFileAction(argparse.Action):
                     # assume that a site that's not in the vcf does actually have the MH ref (we're filtering out non-callable sites, so that's ok)
                     # missingdict allows us to not add something to the defaultdict just because we query it
                     # IF THIS IS CHANGED, ALSO CHANGE IT IN READ_MS.PY! (should be set via a function..)
-                    vcf[chrom] = missingdict(lambda : (True, '0/0', 'N', ['N']))
+                    vcf.init_chrom(chrom)
                     pass
                 if int(pos) in vcf[chrom]:
                     print "error - duplicate position in VCF file?"
