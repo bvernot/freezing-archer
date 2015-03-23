@@ -89,6 +89,4 @@ Population 1 is Africans, Population 2 is East Asian, Population 3 is European. 
 
 [More models can be found here](experiments/null_models/ms_models)
 
-More models can be found here: [](experiments/null_models/ms_models)
-
 [Commands to run S* on those models here](experiments/null_models/bin/submit_null_model_grid_simulations.sh)
