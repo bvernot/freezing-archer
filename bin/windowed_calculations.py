@@ -59,6 +59,7 @@ parser.add_argument('-exclude-inds', '--exclude-individuals', default=[], nargs=
                     help='Exclude snps where these individuals have a nonref allele (or derived, if an ancestral genome is given)')
 parser.add_argument('-tag-ids', '--tag-ids', default=[], nargs='+')
 parser.add_argument('-tags', '--tags', default=[], nargs='+')
+parser.add_argument('-no-pvalues', '--no-pvalues', action='store_true', help='Do not calculate archaic match pvalues for s-star mode.')
 parser.add_argument('-d', '--debug', action='store_true')
 parser.add_argument('-ms', '--vcf-is-ms-file', action='store_true')
 parser.add_argument('-mspops', '--ms-pop-sizes', default=None, nargs='+', type=int, help='This is identical to the -I argument for ms. WRT target and reference populations, numbering starts from 0.')

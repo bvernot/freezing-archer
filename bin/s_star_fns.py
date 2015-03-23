@@ -274,12 +274,13 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
 
     if opts.debug: print 'starting window', chrom, winstart, winend, 'NUM SNPS:', len(snps)
     if len(snps) <= 2: return
-
-    if opts.archaic_vcf != None:
-        (match_pvals2, match_pct2, ref_nones) = calc_local_match_pval(chrom, winstart, winend, snps, opts)
-    else:
+    
+    if opts.archaic_vcf == None or opts.no_pvalues:
         match_pvals2 = ['NA', 'NA'] * opts.num_samples
         match_pct2   = ['NA', 'NA'] * opts.num_samples
+        ref_nones = 0
+    else:
+        (match_pvals2, match_pct2, ref_nones) = calc_local_match_pval(chrom, winstart, winend, snps, opts)
         pass
 
     # # print snps[0]['pos'], snps[-1]['pos']
@@ -300,6 +301,7 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
         # print snps
         ind1_snps = [s for s in snps if s['genotypes'][ind] > 0 and s['target'] and not s['reference']]
         ind1_snps_all = [s for s in snps if s['genotypes'][ind] > 0]
+        ind1_or_ref_snps = [s for s in snps if s['genotypes'][ind] > 0 or s['reference']]
         ind1_pos = [s['pos'] for s in ind1_snps]
 
         # ind1_hap1 and ind1_hap2 are just masks for which snps are on which haplotypes - they're the same length as ind1_snps
@@ -333,19 +335,20 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
             match_pval = (None,)
             pass
 
-        if len(s_star_snps) >= 2 and opts.archaic_vcf != None:
+        if len(s_star_snps) < 2 or opts.archaic_vcf == None or opts.no_pvalues:
+            match_pvals3 = ['NA', 'NA'] * opts.num_samples
+            match_pct3   = ['NA', 'NA'] * opts.num_samples
+
+        else:
             s_start = ind1_snps[min(s_star_snps)]['pos']
             s_stop  = ind1_snps[max(s_star_snps)]['pos']
             (match_pvals3, match_pct3, ref_nones3) = calc_local_match_pval(chrom, winstart, winend, snps, opts, ind, subset_start = s_start, subset_end = s_stop)
             # print ind, s_start, s_stop, match_pvals3
             # print ind, match_pct3
-        else:
-            match_pvals3 = ['NA', 'NA'] * opts.num_samples
-            match_pct3   = ['NA', 'NA'] * opts.num_samples
             pass
 
         if opts.first_line:
-            print '\t'.join(('chrom', 'winstart', 'winend', 'n_snps', 'n_ind_snps',
+            print '\t'.join(['chrom', 'winstart', 'winend', 'n_snps', 'n_ind_snps', 'n_region_ind_snps',
                              'ind_id',
                              'pop',
                              's_star',
@@ -357,11 +360,13 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
                              'hap_1_window_match_pct_local', 'hap_2_window_match_pct_local',
                              'ref_nocals',
                              'n_s_star_snps_hap1', 'n_s_star_snps_hap2',
-                             's_star_haps'))
+                             's_star_haps'] + 
+                            opts.tag_ids)
+
             opts.first_line = False
             pass
 
-        print '\t'.join(str(s) for s in (chrom, winstart, winend, len(snps), len(ind1_snps),
+        print '\t'.join(str(s) for s in [chrom, winstart, winend, len(snps), len(ind1_snps), len(ind1_or_ref_snps),
                                          opts.get_id_from_sample_index(ind),
                                          opts.get_pop_from_sample_index(ind),
                                          s_star, 
@@ -373,7 +378,8 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
                                          match_pct3[ind*2], match_pct3[ind*2+1],
                                          ref_nones,
                                          n_haps1, n_haps2,
-                                         ','.join(str(s) for s in all_haps) if len(s_star_snps) > 0 else '.'))
+                                         ','.join(str(s) for s in all_haps) if len(s_star_snps) > 0 else '.'] +
+                        opts.tags)
 
                                          # sum([s['arc_match'] for s in ind1_snps]),
         
