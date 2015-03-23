@@ -29,7 +29,7 @@ python  ../windowed_calculations.py \
     -indf test_files/science_supplement_example.indpop \
     -target-pops tar \
     -ref-pops ref \
-    --neand-vcf test_files/science_supplement_example.arch \
+    --archaic-vcf test_files/science_supplement_example.arch \
     -p 10 \
     -s-star \
     -winlen 50000 \
@@ -49,7 +49,7 @@ python  ../windowed_calculations.py \
     -indf test_files/science_supplement_example.indpop \
     -target-pops tar \
     -ref-pops ref \
-    --neand-vcf test_files/science_supplement_example.arch \
+    --archaic-vcf test_files/science_supplement_example.arch \
     -p 10 \
     -s-star \
     -winlen 50000 \
