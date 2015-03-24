@@ -11,7 +11,7 @@ import math
 
 parser = argparse.ArgumentParser(description='Generate ms code for various models; optionally run the ms code with -r.')
 
-parser.add_argument('-m', '--model', choices=['asn_ea_aa', 'two_pop'], required = True)
+parser.add_argument('-m', '--model', choices=['asn_ea_aa', 'two_pop', 'two_pop_two_wave_merge'], required = True)
 parser.add_argument('-d', '--debug', action = 'store_true')
 parser.add_argument('-dd', '--debug-2', action = 'store_true')
 parser.add_argument('-ddd', '--debug-3', action = 'store_true')
@@ -28,6 +28,8 @@ parser.add_argument('-s23b', '--pop2and3-anc-size-at-bottleneck', default=None, 
 parser.add_argument('-replace-ms', '--replace-ms-file', default=True)
 parser.add_argument('-split', '--p1-p2-split', default=128000, type=int)
 parser.add_argument('-split23', '--p2-p3-split', default=23000, type=float)
+parser.add_argument('-joinwaves', '--join-waves-time', default=None, type=float, 
+                    help='used in two_pop_two_wave_merge, time of joining of 1st and 2nd OOA wave into 2nd population')
 parser.add_argument('-struct', '--ancestral-structure', default=None, type=float, help='This is the percentage of each subpopulation (in the structured, ancestral population) that is made of migrants from the other population.')
 parser.add_argument('-struct-join', '--struct-pop-join', default=None, type=int)
 parser.add_argument('-is-struct', '--is-struct', default = 2, type = int, help='for ABC, sometimes we give struct params when we really don\'t want structure.  if that\'s the case, give the --is-struct 1 flag, and all struct params will be ignored.  It\'s really stupid, but I can\'t get ABCtoolbox to generate 1s and 0s, so instead 1 == False and 2 == True')
@@ -356,7 +358,7 @@ if args.model == 'asn_ea_aa':
 
 elif args.model == 'two_pop':
 
-    if args.arc_chrs > 0:
+    if args.arc_chrs > 0 or args.migration_percent:
         print "two_pop model doesn't currently support archaic introgression!"
         print "use: -mig 0 -arc-chrs 0"
         sys.exit(-1)
@@ -426,6 +428,89 @@ elif args.model == 'two_pop':
         pass
 
     pass
+
+elif args.model == 'two_pop_two_wave_merge':
+
+    if args.arc_chrs > 0 or sum(args.migration_percent) != 0:
+        print "two_pop_two_wave_merge model doesn't currently support archaic introgression!"
+        print "use: -mig 0 -arc-chrs 0"
+        print "currently:", args.migration_percent, args.arc_chrs
+        sys.exit(-1)
+        pass
+
+    if args.pop1_ne == None or args.pop2_ne == None or args.p1_p2_ne == None or args.join_waves_time == None:
+        print "two_pop model requires Ne of pop1, pop2, and pop1&2 (-s1  -s2  -s12), along with -joinwaves"
+        sys.exit(-1)
+        pass
+    
+    cmd = args.ms_bin + " %d %d " % (args.pop1_ninds * 2 + args.pop2_ninds * 2, args.num_samples)
+
+    if args.seg_sites != None:
+        cmd += "-s %d " % args.seg_sites
+    else:
+        cmd += "-t %e " % theta
+        pass
+    cmd += "-r %s %d " % (recomb, args.reglen)
+    if args.tbsfile != None:
+        cmd = 'cat %s | %s' % (args.tbsfile, cmd)
+        pass
+    ## population sample sizes
+    cmd += "-I 2 %d %d 0 " % (args.pop1_ninds * 2, args.pop2_ninds * 2)
+
+    
+    ## set initial population sizes
+    cmd += "-n 1 %f " % scale_N(args.pop1_ne)
+    cmd += "-n 2 %f " % scale_N(args.pop2_ne)
+
+    ## "split" current non-Afr pop into two
+    cmd += "-es %e 2 .75 " % scale_time(args.join_waves_time)
+    cmd += "-en %e 3 %f " % (scale_time(args.join_waves_time), scale_N(args.pop2_ne))
+    ## join second wave non-Afr pop into Afr
+    cmd += "-ej %e 3 1 " % scale_time(args.p1_p2_split)
+    ## join first wave non-Afr pop into Afr 10kyrs earlier
+    cmd += "-ej %e 2 1 " % scale_time(args.p1_p2_split + 10000)
+
+    ## join two pops (don't need to do this, first and second wave already joined Afr)
+    # cmd += '-ej %e 2 1 ' % scale_time(args.p1_p2_split)
+    cmd += '-en %e 1 %e ' % (scale_time(args.p1_p2_split), scale_N(args.p1_p2_ne))
+
+
+    # ## set migration
+    # eur_afr_mig = 0.7310
+    # afr_eur_mig = 0.7310
+    # eur_asn_mig = 0.909364
+    # asn_afr_mig = 0.228072
+    # if args.rescale_migration_eur_asn_afr:
+    #     eur_afr_mig = eur_afr_mig * 23000 / args.p2_p3_split
+    #     afr_eur_mig = afr_eur_mig * 23000 / args.p2_p3_split
+    #     eur_asn_mig = eur_asn_mig * 23000 / args.p2_p3_split
+    #     asn_afr_mig = asn_afr_mig * 23000 / args.p2_p3_split
+    #     if args.debug: print "ADJUST MIGRATION PARAMS", eur_afr_mig, afr_eur_mig, eur_asn_mig, asn_afr_mig, args.p2_p3_split, args.migration_africa_to_europe
+    #     pass
+    # # if we're specifically setting the migration rate from afr to europe, then just overwrite whatever value we have - don't rescale, for example 
+    # if args.migration_africa_to_europe != None:
+    #     afr_eur_mig = args.migration_africa_to_europe
+    #     pass
+
+    # cmd += '-em 0 1 2 %f -em 0 2 1 %f ' % (eur_afr_mig, afr_eur_mig) # afr and eur (symetric by default, but can be changed with -mig-afr-eur)
+    # cmd += '-em 0 1 3 %f -em 0 3 1 %f ' % (asn_afr_mig, asn_afr_mig) # afr and asn (symetric for now)
+    # ######## MIGRATION BTWN EUR AND ASN: 3.11 * 0.2924 (3.11 is migration value from Gravel et al, and 0.2924 is the factor used to get the appropriate ms value)
+    # cmd += '-em 0 2 3 %f -em 0 3 2 %f ' % (eur_asn_mig, eur_asn_mig) # eur and asn (symetric for now)
+
+    
+    ## output tree stuff
+    cmd += "-L " + args.report_trees
+
+    if args.seeds != None:
+        cmd += "-seeds " + ' '.join([str(i) for i in args.seeds]) + ' '
+        pass
+
+    if args.debug:
+        print cmd
+        pass
+
+    pass
+
 
 
 print >> sys.stderr, cmd.replace('/net/gs/vol2/home/bvernot/bin/ms', 'python ~/Dropbox/msVis/msVis.py') + ' -years -N0 %d -gen %d' % (args.Nzero, args.generation_time)
