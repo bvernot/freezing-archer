@@ -26,6 +26,8 @@
 
 ## To run with Denisovan as archaic:
 
+    chr=1
+    
     python bin/windowed_calculations.py \
      --vcf-has-illumina-chrnums \
      -vcfz /net/akey/vol1/home/bvernot/archaic_1kg_p3/data/png_phased_vcfs/round_3_merged_with_1kg/phased.png.chr$chr.merged_with_1kg.vcf.gz \
