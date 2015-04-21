@@ -27,7 +27,8 @@ def initialize_analysis(opts):
 def run_window_analysis(chrom, winstart, winend, snps, opts):
 
     full_chrom = ('chr' if opts.vcf_has_illumina_chrnums else '') + chrom
-    mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend)
+    mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend) if opts.regions != None else opts.window_length
+    # mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend)
     mapped_bases_bin = mapped_bases // 1000 * 1000
 
     # get neand snps for this region

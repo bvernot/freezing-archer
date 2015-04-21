@@ -27,7 +27,8 @@ def initialize_analysis(opts):
 def run_window_analysis(chrom, winstart, winend, snps, opts):
 
     full_chrom = ('chr' if opts.vcf_has_illumina_chrnums else '') + chrom
-    mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend)
+    mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend) if opts.regions != None else opts.window_length
+    # mapped_bases = opts.regions.amount_in_region(full_chrom, winstart, winend)
     mapped_bases_bin = mapped_bases // 1000 * 1000
 
     # get neand snps for this region
@@ -38,7 +39,8 @@ def run_window_analysis(chrom, winstart, winend, snps, opts):
     # print 'neand positions', chrom, winstart, winend, \
     #    mapped_bases, len(snps), len(opts.archaic_vcf.vcf[chrom]), len(neand_pos), neand_pos, [p for p in range(winstart, winend) if opts.archaic_vcf.has_var_at_site(chrom, p)]
 
-    for ind in range(len(opts.updated_ind_ids)):
+    # JUST LOOKING AT REFERENCE INDIVIDUALS?  I.E., YRI FROM S* CALCULATION
+    for ind in opts.reference_indices:
 
         # get the list of genotypes for each individual (ignore target and reference?)  ## and s['target'] and not s['reference']
         ind_snps = [s for s in snps if s['genotypes'][ind] > 0]
