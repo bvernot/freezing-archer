@@ -134,7 +134,7 @@ def process_ms_block_to_snp_list(ms_file, opts):
     arc_pop_sizes = [len(c) for c in opts.ms_archaic_chromosomes_by_pop]
     genotype_results = process_ms_block_to_genotypes(ms_file,
                                                      opts.ms_num_diploid_inds,
-                                                     opts.window_length,
+                                                     opts.ms_simulated_region_length,
                                                      opts.current_ms_chrom,
                                                      arc_pop_sizes)
 
@@ -178,6 +178,9 @@ def process_ms_block_to_snp_list(ms_file, opts):
 
         # turn into derived count, not haplotypes
         snp_d['genotypes'] = [sum(gt) for gt in genotypes]
+
+        snp_d['sfs_target'] = sum(snp_d['genotypes'][:opts.num_target])
+        snp_d['sfs_reference'] = sum(snp_d['genotypes'][opts.num_target:opts.num_reference])
         
         snps.append(snp_d)
         
@@ -206,8 +209,11 @@ def ms_to_genotypes_windowed(ms_file, winlen, winstep, ms_ind_pop_file, opts, st
         snps = process_ms_block_to_snp_list(ms_file, opts)
         
         if snps == None: break
-        
-        yield (opts.current_ms_chrom, winstart, winend, snps)
+
+        for strt in range(0, opts.ms_simulated_region_length - winlen + 1, winstep):
+            end = strt + winlen
+            yield (opts.current_ms_chrom, strt, end, [s for s in snps if s['pos'] >= strt and s['pos'] < end])
+            pass
 
         pass
 
