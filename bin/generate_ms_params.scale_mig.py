@@ -358,7 +358,7 @@ if args.model == 'asn_ea_aa':
 
 elif args.model == 'two_pop':
 
-    if args.arc_chrs > 0 or args.migration_percent:
+    if args.arc_chrs > 0 or sum(args.migration_percent) != 0:
         print "two_pop model doesn't currently support archaic introgression!"
         print "use: -mig 0 -arc-chrs 0"
         sys.exit(-1)

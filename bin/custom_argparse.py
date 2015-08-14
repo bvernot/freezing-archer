@@ -2,6 +2,7 @@ import argparse, sys
 from collections import defaultdict
 import locale
 import gzip
+import gc
 
 from myBedTools3 import myBedTools
 
@@ -24,113 +25,6 @@ class missingdict(defaultdict):
         return self.default_factory()
     pass
 
-class vcf_class(object):
-
-    geno_map = {'0/0':0, '0/1':1, '1/0':1, '1/1':2,
-                '0|0':0, '0|1':1, '1|0':1, '1|1':2}
-
-    def __init__(self, vcf):
-        self.vcf = vcf
-        return
-
-    @staticmethod
-    def base_chrom_dict():
-        return missingdict(lambda : (True, '0/0', 'N', ['N']))
-
-    def init_chrom(self, chrom):
-        self.vcf[chrom] = vcf_class.base_chrom_dict()
-        pass
-
-    def has_var_at_site(self, chrom, pos):
-        return pos in self.vcf[chrom]
-
-    def get_genotype_str_one_based(self, chrom, pos):
-        return self.vcf[chrom][pos][1]
-
-    def get_genotype_one_based(self, chrom, pos, ref_is_derived = False):
-        return (2-vcf_class.geno_map[self.vcf[chrom][pos][1]]) if ref_is_derived else vcf_class.geno_map[self.vcf[chrom][pos][1]]
-
-    def get_alts_one_based(self, chrom, pos):
-        return self.vcf[chrom][pos][3]
-
-    def get_ref_one_based(self, chrom, pos):
-        return self.vcf[chrom][pos][2]
-
-    def has_ref(self, chrom, pos):
-        return self.vcf[chrom][pos][0]
-
-    def get_bases_one_based(self, chrom, pos):
-        #print self.vcf[chrom][pos]
-        #print self.get_alts_one_based(chrom, pos), '+', ([self.get_ref_one_based(chrom, pos)] if self.has_ref(chrom, pos) else [])
-        return self.get_alts_one_based(chrom, pos) + ([self.get_ref_one_based(chrom, pos)] if self.has_ref(chrom, pos) else [])
-
-    pass
-
-class VCFFileAction(argparse.Action):
-    def __call__(self, parser, namespace, filelist, option_string=None):
-
-        vcf_list = list()
-
-        for filename in filelist:
-
-            if filename.endswith('.gz'):
-                vcffile = gzip.open(filename)
-            else:
-                vcffile = open(filename, 'r')
-                pass
-            
-            # vcf = defaultdict(lambda : ['N'])
-            vcf = {}
-            sys.stderr.write("Reading VCF file %s..\n" % filename)
-            c = 0
-            warn_strip_chrom = False
-            
-            for line in vcffile:
-                if line.strip().startswith('#'): continue
-                try:
-                    [chrom, pos, _, ref, alt, qual, _, _, _, gt_info] = line.strip().split()
-                except ValueError:
-                    print "Too many lines in VCF?  Expecting one individual (9 columns):"
-                    print line
-                    sys.exit(-1)
-                    pass
-                if namespace.vcf_has_illumina_chrnums and chrom.startswith('chr'):
-                    chrom = chrom[3:]
-                    warn_strip_chrom = True
-                    pass
-                if chrom not in vcf:
-                    # assume that a site that's not in the vcf does actually have the MH ref (we're filtering out non-callable sites, so that's ok)
-                    # missingdict allows us to not add something to the defaultdict just because we query it
-                    # IF THIS IS CHANGED, ALSO CHANGE IT IN READ_MS.PY! (should be set via a function..)
-                    vcf[chrom] = vcf_class.base_chrom_dict()
-                    pass
-                if int(pos) in vcf[chrom]:
-                    print "error - duplicate position in VCF file?"
-                    print chrom, pos, ref, alt
-                    print line
-                    sys.exit(-1)
-                    pass
-                gt = gt_info[:3]
-                
-                # IF THIS IS CHANGED, ALSO CHANGE IT IN READ_MS.PY! (should be set via a function..)
-                # (has_ref, genotype ('0/0', etc), ref_base, alt_bases)
-                vcf[chrom][int(pos)] = ('0' in gt, gt, ref, alt.split(','))
-                
-                # print chrom, pos, ref, alt, qual, gt_info, vcf[chrom][int(pos)]
-                c += 1
-                pass
-            sys.stderr.write(" with %d lines.\n" % c)
-            if warn_strip_chrom:
-                sys.stderr.write(" WARNING: REMOVED LEADING 'chr' FROM CHROMOSOME NAMES, TO MATCH ILLUMINA VCFS\n")
-                pass
-
-            vcf_list.append(vcf_class(vcf))
-            pass
-        
-        setattr(namespace, self.dest, vcf_list)
-        # setattr(namespace, self.dest, vcf)
-        pass
-    pass
 
 
 class BinaryBedFileAction(argparse.Action):
@@ -169,6 +63,7 @@ class IntersectBinaryBedFilesAction(argparse.Action):
         bt.read_to_bases(myBedTools.binarybedfilegenome, filenames[0], myBedTools.set_to_one)
         for f in filenames[1:]:
             bt.read_to_bases(myBedTools.binarybedfilegenome, f, myBedTools.bitfn_and)
+            gc.collect()
             pass
         setattr(namespace, self.dest, bt)
         pass
@@ -202,3 +97,65 @@ def munge_regions(opts):
         pass
 
     return
+
+
+class ancestral_vcf(object):
+
+    def __init__(self, filename):
+        
+        self.vcf = {}
+        vcffile = open(filename, 'r')
+
+        c = 0
+        
+        for line in vcffile:
+
+            if line.strip().startswith('#'): continue
+
+            try:
+                [chrom, pos, _, ref, alt, qual, _, _, _, gt_info] = line.strip().split()
+                pos = int(pos)
+            except ValueError:
+                print "Too many lines in ANCESTRAL VCF: %s?" % filename 
+                print "Expecting one individual (10 columns):"
+                print line
+                sys.exit(-1)
+                pass
+
+            if chrom not in self.vcf:
+                self.vcf[chrom] = self.base_chrom_dict()
+                pass
+
+            if pos in self.vcf[chrom]:
+                print "error - duplicate position in VCF file?"
+                print chrom, pos, ref, alt
+                print line
+                sys.exit(-1)
+                pass
+
+            self.add_site(chrom, pos, ref)
+            
+            c += 1
+            pass
+
+        return
+
+    @staticmethod
+    def base_chrom_dict():
+        return {}
+
+    def init_chrom(self, chrom):
+        self.vcf[chrom] = vcf_class.base_chrom_dict()
+        return
+
+    def add_site(self, chrom, pos, ref):
+        self.vcf[chrom][pos] = ref
+        return
+
+    def has_site(self, chrom, pos):
+        return pos in self.vcf[chrom]
+
+    def get_base_one_based(self, chrom, pos, illumina_chrs = False):
+        if not self.has_site(chrom, pos):
+            return 'N'
+        return self.vcf[chrom][pos]

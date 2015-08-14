@@ -7,6 +7,7 @@ import bitarray as bitarray_m
 # sys.path.append('/net/akey/vol1/home/bvernot/tishkoff/metrics/')
 # from region_stats import region_type_stats
 import fileinput
+import gc
 from operator import itemgetter
 
 class myBedTools:
@@ -28,6 +29,11 @@ class myBedTools:
 
     bedtypes = (bedfile, binarybedfile, binarybedfilegenome)
 
+    chrmap_1kg = {c : 'chr' + c for c in [str(i) for i in range(1,23)] + ['X', 'Y', 'M']}
+    for c in chrmap_1kg.values():
+        chrmap_1kg[c] = c
+        pass
+
     binarybedfilegenome_code = '0000000000000000000000000000000000000000000000000000000000101010'
     binaryseqfilegenome_code = '0000000000000000000000000000000000000000000000000000000000101011'
 
@@ -38,6 +44,7 @@ class myBedTools:
                         'T': bitarray('100')}
 
     def __init__(self, output_type, debug = False, output_file_name = None, invert = False, ref_version = 'b37', initialize = True):
+
 
         # store type of analysis
         self.output_type = output_type
@@ -182,7 +189,7 @@ class myBedTools:
     filename = 'none'
     def read_to_bases(self, filetype, filename, fn, exp_chr = None, header = False):
         self.filename = os.path.basename(filename)
-        sys.stderr.write('Reading file...')
+        sys.stderr.write('Reading file... ' + self.filename + ' ')
         if filetype == self.binarybedfile:
             if exp_chr == None:
                 print "must send exp_chr for bb files!"
@@ -356,6 +363,7 @@ class myBedTools:
                     pass
                 pass
             pass
+        gc.collect()
         sys.stderr.write(' done\n')
         return
 
@@ -476,6 +484,7 @@ class myBedTools:
             for c in self.chrs:
                 s = self.chr_offset[c]
                 e = s + self.chr_lens[c]
+                chr_e = self.chr_lens[c]
                 sys.stderr.write('outputing bed for %s, %d-%d\n' % (c, s, e))
                 chr_bases = self.bases[s:e]
                 pre = []
@@ -484,8 +493,10 @@ class myBedTools:
                     pass
                 for i in pre + chr_bases.search(ohone):
                     j = i+2
-                    while chr_bases[j]:
+                    #print 'about to loop test', j, e
+                    while j < chr_e and chr_bases[j]:
                         j += 1
+                        #print 'about to test', j, e
                         continue
                     print '%s\t%d\t%d' % (c, i+1, j)
                     pass
@@ -556,6 +567,7 @@ class myBedTools:
         return
     
     def get_base_one_based(self, chr, pos):
+        chr = self.chrmap_1kg[chr]
         self.check_pos(chr, pos-1, pos)
         site = self.chr_offset[chr] * self.factor + pos * self.factor
         return self.bases[site - self.factor : site].decode(self.binaryseq_decode)[0]
@@ -569,6 +581,7 @@ class myBedTools:
         return self.bases.count()
 
     def in_region_one_based(self, chr, pos):
+        chr = self.chrmap_1kg[chr]
         self.check_pos(chr, pos-1, pos)
         return self.bases[self.chr_offset[chr] + pos - 1] > 0
     
@@ -577,10 +590,12 @@ class myBedTools:
         return self.bases[self.chr_offset[chr] + pos] > 0
     
     def amount_in_region(self, chr, start, end, fail = True):
-        
+
         ## if the full region isn't part of the chr definition, then either
         ##   a) if fail==True, check_pos will sys.exit()
         ##   b) if fail==False, check_pos will return False, and we'll adjust the size of the region and return the number of mapped bases
+
+        chr = self.chrmap_1kg[chr]
 
         if self.check_pos(chr, start, end, fail):
             return sum(self.bases[self.chr_offset[chr]+start : self.chr_offset[chr]+end])

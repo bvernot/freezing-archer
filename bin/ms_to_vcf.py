@@ -62,7 +62,8 @@ if nsam != 2 * opts.num_inds + sum(opts.archaic_num_chrs):
     pass
 
 ## print header
-print '\t'.join(['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT'] + ['i%d' % d for d in xrange(1,opts.num_inds+1)])
+opts.output_file.write( '\t'.join(['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT'] + \
+                                      ['i%d' % d for d in xrange(1,opts.num_inds+1)]) + '\n' )
 
 # seed params
 seed_params = opts.msfile.readline()
@@ -85,7 +86,8 @@ if ms_block_results != None:
     
     blocknum = 1
     for pos, gts in snps:
-        print '\t'.join(str(s) for s in ['ms%d' % blocknum, pos, '.', 'A', 'G', '.', '.', '.', 'GT'] + ['%d|%d' % (gt[0], gt[1]) for gt in gts])
+        opts.output_file.write('\t'.join(str(s) for s in ['ms%d' % blocknum, pos, '.', 'A', 'G', '.', '.', '.', 'GT'] + \
+                                             ['%d|%d' % (gt[0], gt[1]) for gt in gts]) + '\n')
         pass
 
     for vcf_index, archaic_vcf in enumerate(archaic_vcfs):

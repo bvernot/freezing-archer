@@ -1,2 +1,43 @@
 #!/bin/bash
 
+USAGE="Concatenate TSV files, preserving the header of the first file.
+If the header differs between files, exit with a warning.
+Usage: $0 file1 file2 file3 ... fileN"
+
+if [ "$#" == "0" ]; then
+    echo "$USAGE"
+    exit 1
+fi
+
+
+header=$(head -n1 $1)
+
+# echo $header
+cat $1
+
+shift
+
+for item in "$@" ; do
+
+    if [ ! -s $item ] ; then
+        >&2 echo "EMPTY $item"
+        continue
+    fi
+
+    >&2 echo "processing $item"
+    
+    header_tmp=$(head -n1 $item)
+
+    # echo $header_tmp
+    if [[ $header != $header_tmp ]] ; then
+        >&2 echo "ERROR: INCOMPATIBLE HEADERS"
+        >&2 echo "First File: $header"
+        >&2 echo "This  File: $header_tmp"
+        exit 2
+    fi
+
+    sed 1d $item
+    
+done
+
+

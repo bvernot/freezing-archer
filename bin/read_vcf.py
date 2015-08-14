@@ -22,6 +22,10 @@ def process_vcf_line_to_genotypes(line, opts):
     snp_d['info'] = split_line[7]
     format = split_line[8]
 
+    ## drop snps before the specified range (we deal with the end of the range in windowed_calculations)
+    if opts.window_range != None and snp_d['pos'] < opts.window_range[0]:
+        return None
+
     ## remove non-biallelic sites
     if len(snp_d['ref']) != 1 or len(snp_d['alt']) != 1:
         if opts.debug: print "dropping snp because it is not biallelic, or is an indel", snp_d['chrom'], snp_d['pos'], snp_d['ref'], snp_d['alt']
@@ -41,6 +45,7 @@ def process_vcf_line_to_genotypes(line, opts):
 
     ## flip for derived?
     flip_for_derived = use_derived and snp_d['alt'].upper() == opts.ancestral_bsg.get_base_one_based(chrom, snp_d['pos'])
+    # print use_derived, snp_d['alt'].upper(), opts.ancestral_bsg.get_base_one_based(chrom, snp_d['pos'])
     if use_derived and opts.debug: print "checking derived from ancestral genome:", snp_d['chrom'], snp_d['pos'], \
             'ancestral =', opts.ancestral_bsg.get_base_one_based(chrom, snp_d['pos']), \
             'ref/alt =', snp_d['ref'], snp_d['alt'], 'flip_for_derived =', flip_for_derived, 'DERIVED' if flip_for_derived else ''
@@ -69,7 +74,10 @@ def process_vcf_line_to_genotypes(line, opts):
 
         ## SWAP REF AND ALT, so ref is "ancestral"
         # not sure if this is the best thing, because you might still want to know what the real ref/alt bases are.. but for now it works
-        # (snp_d['ref'], snp_d['alt'])  = (snp_d['alt'], snp_d['ref'])
+        (snp_d['anc'], snp_d['der'])  = (snp_d['alt'], snp_d['ref'])
+
+    else:
+        (snp_d['der'], snp_d['anc'])  = (snp_d['alt'], snp_d['ref'])
         pass
 
     genotypes = t_gt + r_gt
@@ -130,25 +138,34 @@ def process_vcf_line_to_genotypes(line, opts):
     snp_d['haplotypes_2'] = hap2_final
 
     snp_d['sfs_target'] = sum(genotypes[:opts.num_target])
-    snp_d['sfs_reference'] = sum(genotypes[opts.num_target:opts.num_reference])
+    snp_d['sfs_reference'] = sum(genotypes[opts.num_target:opts.num_target+opts.num_reference])
+    # print 'VCF', snp_d['sfs_reference'], genotypes[opts.num_target:opts.num_target+opts.num_reference], genotypes, opts.num_target, opts.num_reference
+
     if opts.archaic_vcf != None:
-        if flip_for_derived:
-            # if the ref is derived (alt is ancestral), then check to see if neand has reference
-            snp_d['arc_match'] = opts.archaic_vcf.has_ref(snp_d['chrom'], snp_d['pos'])
-        else:
-            # otherwise, check to see if the alt matches neand
-            snp_d['arc_match'] = snp_d['alt'].upper() in opts.archaic_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
-            # print 'debug arc_match', snp_d['pos'], snp_d['alt'].upper(), opts.archaic_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
+
+        if flip_for_derived and not opts.archaic_vcf.has_site(snp_d['chrom'], snp_d['pos']):
+            opts.archaic_vcf.add_site(snp_d['chrom'], snp_d['pos'], '1/1', snp_d['anc'], snp_d['der'], None)
             pass
-        snp_d['arc_genotype'] = opts.archaic_vcf.get_genotype_one_based(snp_d['chrom'], snp_d['pos'], flip_for_derived)
+
+        snp_d['arc_match'] = opts.archaic_vcf.has_derived(snp_d['chrom'], snp_d['pos']) and \
+            snp_d['der'].upper() == opts.archaic_vcf.get_derived(snp_d['chrom'], snp_d['pos'])
+
+        snp_d['arc_der_count'] = opts.archaic_vcf.get_derived_count(snp_d['chrom'], snp_d['pos'])
+
+        # if snp_d['arc_match'] != opts.archaic_vcf.has_derived(snp_d['chrom'], snp_d['pos'], opts.ancestral_bsg, add_chr_to_name = opts.vcf_has_illumina_chrnums):
+        #     print "Error in arc_match and has_derived?"
+        #     print 'anc, der:', snp_d['ref'], snp_d['alt']
+        #     print 'ref is derived:', flip_for_derived
+        #     print 'arc_match:', snp_d['arc_match']
+        #     print 'archaic has derived:', opts.archaic_vcf.has_derived(snp_d['chrom'], snp_d['pos'], opts.ancestral_bsg, add_chr_to_name = opts.vcf_has_illumina_chrnums)
+        #     print 'ancestral state is called:', opts.ancestral_bsg.get_base_one_based(chrom, snp_d['pos'])
+        #     print 'archaic bases:', opts.archaic_vcf.get_bases_one_based(snp_d['chrom'], snp_d['pos'])
+        #     print 'archaic state:', opts.archaic_vcf.vcf[snp_d['chrom']][snp_d['pos']]
+        #     sys.exit(-1)
+        #     pass
 
         if opts.ancestral_bsg != None:
             snp_d['arc_is_derived'] = snp_d['arc_match']
-            # if flip_for_derived:
-            #     snp_d['arc_is_derived'] = opts.archaic_vcf.has_ref(snp_d['chrom'], snp_d['pos'])
-            # else:
-            #     snp_d['arc_is_derived'] = snp_d['alt'].upper() in opts.archaic_vcf.get_alts_one_based(snp_d['chrom'], snp_d['pos'])
-            #     pass
             pass
             
         if opts.debug: print "neand match", snp_d['pos'], genotypes, snp_d['alt'].upper(), \
