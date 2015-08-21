@@ -48,12 +48,15 @@ parser.add_argument('-vcf', '--vcf-file', required=False, type=argparse.FileType
 parser.add_argument('-vcfz', '--gzip-vcf-file', required=False, default=None)
 parser.add_argument('-indf', '--ind-pop-file', required=False, type=argparse.FileType('r'), default=None)
 parser.add_argument('-ptable', '--match-pval-table', default=None)
+parser.add_argument('-ptable-precomputed', '--match-pval-table-precomputed', default=None, type=argparse.FileType('r'))
 parser.add_argument('-ptmode', '--table-pval-mode', default='pytables', help='could be pandas')
 parser.add_argument('-pninds', '--ptables-ninds-for-sfs', type=int, default=108)
 parser.add_argument('-padjsfs', '--ptables-adjust-sfs-from-target-to-ref', type=float, default=1)
 parser.add_argument('-pfile', '--pickle-file-for-match-pvals', default=None)
 parser.add_argument('-winlen', '--window-length', type=int, default=50000)
 parser.add_argument('-winstep', '--window-step', type=int, default=20000)
+parser.add_argument('-winfile', '--window-file', type=argparse.FileType('r'), default=None)
+parser.add_argument('-winchrom', '--process-chromosome', type=int, default=None)
 parser.add_argument('-l', '--limit-wins', type=int, default=0)
 parser.add_argument('-p', '--progress', type=int, default=0)
 parser.add_argument('-range', '--window-range', type=int, nargs=2, default=None, 
@@ -241,6 +244,38 @@ if opts.match_pval_table != None:
         sys.stderr.write('...finished loading pval tables\n')
         pass
     
+    if opts.match_pval_table_precomputed != None:
+        sys.stderr.write('reading precomputed pval file %s..\n' % opts.match_pval_table_precomputed)
+        mydict = {}
+        c = 1
+        header = opts.match_pval_table_precomputed.readline().strip().split()
+
+        for line in opts.match_pval_table_precomputed:
+            c += 1
+            #  2720 hap_1_window_pval_table hap_1_window_match_pct_table    hap_1_window_match_N_table      hap_1_window_match_len_table    hap_1_window_match_mapped_table hap_1_window_match_mh_table
+
+            [count,
+             hap_1_window_pval_table,
+             hap_1_window_match_pct_table,
+             hap_1_window_match_N_table,
+             hap_1_window_match_len_table,
+             hap_1_window_match_mapped_table,
+             hap_1_window_match_mh_table] = line.strip().split()
+
+            # if count == '1': continue
+
+            mydict[(hap_1_window_match_pct_table,
+                    hap_1_window_match_N_table,
+                    hap_1_window_match_len_table,
+                    hap_1_window_match_mapped_table,
+                    hap_1_window_match_mh_table)] = hap_1_window_pval_table
+            
+            if c % 1000000 == 0: print 'read..', len(mydict)
+            pass
+
+        opts.match_pval_table_precomputed = mydict
+        sys.stderr.write('...finished reading precomputed pval file\n')
+
     pass
 
 

@@ -272,9 +272,21 @@ def vcf_to_genotypes_windowed(vcf_file, winlen, winstep, vcf_ind_pop_file, opts,
 
     snps = []
     keep_reading = True
-    chrom = None
-    winstart = start
-    winend = winlen
+
+    if opts.window_file != None:
+        chrom = None
+        while chrom != opts.process_chromosome:
+            print 'reading chromosomes, looking for %s: %s' % (opts.process_chromosome, chrom)
+            (chrom, winstart, winend) = [int(i) for i in opts.window_file.readline().strip().split()]
+            pass
+        print 'reading chromosomes, looking for %s: %s MATCH' % (opts.process_chromosome, chrom)
+        print 'WINFILE', chrom, winstart, winend
+
+    else:
+        chrom = None
+        winstart = start
+        winend = winlen
+        pass
 
     while keep_reading:
 
@@ -285,8 +297,12 @@ def vcf_to_genotypes_windowed(vcf_file, winlen, winstep, vcf_ind_pop_file, opts,
             
             snp_d = process_vcf_line_to_genotypes(line, opts)
             
-            if snp_d == None: 
+            if snp_d == None:
                 if opts.debug: print
+                continue
+
+            if snp_d['pos'] <= winstart:
+                # print 'SKIPPING', snp_d['pos'], chrom, winstart, winend, 'nsnps', len(snps), snps[0]['pos'] if len(snps) > 0 else None, snps[-1]['pos'] if len(snps) > 0 else None
                 continue
 
             chrom = snp_d['chrom']
@@ -294,13 +310,21 @@ def vcf_to_genotypes_windowed(vcf_file, winlen, winstep, vcf_ind_pop_file, opts,
             # if it's past the window, then yield the current set of snps
             # then adjust the window, prune snps, and check again if you should add it.. repeat..
             while snp_d['pos'] > winend:
+                print 'WINFILE', chrom, winstart, winend, 'nsnps', len(snps), snps[0]['pos'] if len(snps) > 0 else None, snps[-1]['pos'] if len(snps) > 0 else None
                 yield (chrom, winstart, winend, snps)
-                winstart += winstep
-                winend += winstep
+                if opts.window_file != None:
+                    (winchrom, winstart, winend) = [int(i) for i in opts.window_file.readline().strip().split()]
+                    print 'WINFILE', winchrom, winstart, winend
+                    if winchrom != opts.process_chromosome: raise StopIteration
+                else:
+                    winstart += winstep
+                    winend += winstep
+                    pass
                 snps[:] = [s for s in snps if s['pos'] > winstart]
                 pass
             
             # now it's finally definitely in the window!
+            # print 'ADDING', snp_d['pos'], chrom, winstart, winend, 'nsnps', len(snps), snps[0]['pos'] if len(snps) > 0 else None, snps[-1]['pos'] if len(snps) > 0 else None
             snps.append(snp_d)
 
         else:
