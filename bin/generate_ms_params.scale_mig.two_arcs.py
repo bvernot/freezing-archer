@@ -35,6 +35,8 @@ parser.add_argument('-struct-join', '--struct-pop-join', default=None, type=int)
 parser.add_argument('-is-struct', '--is-struct', default = 2, type = int, help='for ABC, sometimes we give struct params when we really don\'t want structure.  if that\'s the case, give the --is-struct 1 flag, and all struct params will be ignored.  It\'s really stupid, but I can\'t get ABCtoolbox to generate 1s and 0s, so instead 1 == False and 2 == True')
 parser.add_argument('-N0', '--Nzero', default=10000, type=float)
 parser.add_argument('-arc-Ne', '--archaic-Ne', default=1500, type=float)
+parser.add_argument('-afr-Ne', '--african-Ne', default=14474, type=float) # 1.98002736
+parser.add_argument('-anc-Ne', '--ancestral-Ne', default=7310, type=float) # 1
 parser.add_argument('-eur-bot', '--eur-bottleneck-size', default=91, type=float)
 parser.add_argument('-gen-time', '--generation-time', default=25, type=int)
 parser.add_argument('-arc-chrs', '--arc-chrs', default=[1,1], nargs=2, type=int)
@@ -281,7 +283,8 @@ if args.model == 'asn_ea_aa':
 
     # cmd += '-eg 0.006997264 1 0 -eg 0.006997264 2 89.7668 -eg 0.006997264 3 113.3896 '
     cmd += '-eg 0.006997264 1 0 -eg 0.006997264 2 %f -eg 0.006997264 3 %f ' % (eur_alpha2, asn_alpha2)
-    cmd += '-en 0.006997264 1 1.98002736 '
+    cmd += '-en 0.006997264 1 %e ' % scale_N(args.african_Ne) # 1.98002736
+    #cmd += '-en 0.006997264 1 1.98002736 '
 
     ## bottleneck in europe and asia (replaced by join?)
     #cmd += '-en 0.031463748 2 0.141176471 '
@@ -312,10 +315,12 @@ if args.model == 'asn_ea_aa':
     # cmd += '-em 0.069767442 1 2 0 -em 0.069767442 2 1 0 '
 
     # and join into one population (afr + eur + asn)
-    cmd += '-ej %e 2 1 -en %e 1 %e ' % (scale_time(args.p1_p2_split), scale_time(args.p1_p2_split), 1.98002736)
+    cmd += '-ej %e 2 1 -en %e 1 %e ' % (scale_time(args.p1_p2_split), scale_time(args.p1_p2_split), scale_N(args.african_Ne)) # 1.98002736
+    # cmd += '-ej %e 2 1 -en %e 1 %e ' % (scale_time(args.p1_p2_split), scale_time(args.p1_p2_split), 1.98002736)
                                         #max(1.98002736, scale_N(max(args.pop2_size_at_bottleneck, args.pop3_size_at_bottleneck))))
 
     # and collapse to ancestral population size
+    cmd += '-en 0.20246238 1 %e ' % scale_N(args.ancestral_Ne)
     #cmd += '-en 0.20246238 1 1 '
     
     ## introgression for one generation, for specified percent, at specified time, to the specified population (from population 4)
