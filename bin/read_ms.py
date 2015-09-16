@@ -83,7 +83,10 @@ def extract_introgressed_chrs_from_tree(ms_tree, arc_chrs, join_time, print_join
 
 
 #@profile
-def process_ms_block_to_genotypes(ms_file, num_inds, window_length, ms_chr, archaic_chromosomes_by_pop = [], ms_archaic_populations_join_times = []):
+def process_ms_block_to_genotypes(ms_file, num_inds, window_length, ms_chr, 
+                                  archaic_chromosomes_by_pop = [], 
+                                  ms_archaic_populations_join_times = [],
+                                  ms_archaic_population_to_process_index = None):
 
     """
     Process one ms block into positions and genotypes.
@@ -107,9 +110,13 @@ def process_ms_block_to_genotypes(ms_file, num_inds, window_length, ms_chr, arch
         # also, we are dealing with 0 based chrs, which is not how the trees in ms are formatted, so be careful!
         # I'm adding 1 to the archaic chromosomes, to look for them in the trees
         # and subtracting one from the intr_chrs, to make them 0 based
-        (bases, intr_chrs) = extract_introgressed_chrs_from_tree(line, [c+1 for c in archaic_chromosomes_by_pop[0]], ms_archaic_populations_join_times[0])
+        # print archaic_chromosomes_by_pop
+        # print ms_archaic_populations_join_times
+        (bases, intr_chrs) = extract_introgressed_chrs_from_tree(line, 
+                                                                 [c+1 for c in archaic_chromosomes_by_pop[ms_archaic_population_to_process_index]], 
+                                                                 ms_archaic_populations_join_times[ms_archaic_population_to_process_index])
         intr_chrs = [c-1 for c in intr_chrs]
-        # print bases, intr_chrs
+        # if len(intr_chrs) > 0: print 'INTR', bases, sorted(intr_chrs, reverse=True)
         
         # we might not have any introgressed chromosomes in this particular region
         num_intr_chrs = len(intr_chrs)
@@ -205,6 +212,10 @@ def process_ms_block_to_genotypes(ms_file, num_inds, window_length, ms_chr, arch
             sys.exit(-1)
             pass
         
+        # print "processing archaic pop", arc_pop_num, arc_pop_num_chrs, archaic_chromosomes_by_pop
+        # print "processing archaic pop", c1_line
+        # print "processing archaic pop", c2_line
+
         c1_line = itertools.imap(int, c1_line)
         c2_line = itertools.imap(int, c2_line)
 
@@ -249,12 +260,15 @@ def process_ms_block_to_snp_list(ms_file, opts):
     opts.current_ms_chrom_index += 1
     opts.current_ms_chrom = 'ms%d' % opts.current_ms_chrom_index
 
+    # print 'DEBUG', opts.ms_archaic_populations, opts.ms_archaic_population_to_process
+
     genotype_results = process_ms_block_to_genotypes(ms_file,
                                                      opts.ms_num_diploid_inds,
                                                      opts.ms_simulated_region_length,
                                                      opts.current_ms_chrom,
                                                      opts.ms_archaic_chromosomes_by_pop,
-                                                     opts.ms_archaic_populations_join_times)
+                                                     opts.ms_archaic_populations_join_times,
+                                                     opts.ms_archaic_populations.index(opts.ms_archaic_population_to_process))
 
     if genotype_results == None:
         return None
@@ -264,8 +278,21 @@ def process_ms_block_to_snp_list(ms_file, opts):
     # print 'archaicVCF', archaic_vcfs
     
     if len(archaic_vcfs) > 0:
-        if len(archaic_vcfs) > 1: sys.stderr.write( "WARNING, ONLY TAKING ONE ARCHAIC AT THIS POINT\n" )
-        opts.archaic_vcf = archaic_vcfs[0]
+        if len(archaic_vcfs) > 1 and opts.ms_archaic_population_to_process == None:
+            sys.stderr.write( "WARNING, ONLY TAKING ONE ARCHAIC AT THIS POINT\n" )
+            opts.archaic_vcf = archaic_vcfs[0]
+        elif len(archaic_vcfs) > 1:
+            if not opts.ms_archaic_population_to_process in opts.ms_archaic_populations:
+                print "-msarc-to-process must be an archaic population given by -msarc!"
+                print "-msarc-to-process:", opts.ms_archaic_population_to_process
+                print "-msarc:", opts.ms_archaic_populations
+                sys.exit(-1)
+                pass
+            opts.archaic_vcf = archaic_vcfs[opts.ms_archaic_populations.index(opts.ms_archaic_population_to_process)]
+        else:
+            opts.archaic_vcf = archaic_vcfs[0]
+            pass
+            
     else:
         opts.archaic_vcf = read_archaic_vcf.vcf_class()
         opts.archaic_vcf.init_chrom(opts.current_ms_chrom)
@@ -278,15 +305,17 @@ def process_ms_block_to_snp_list(ms_file, opts):
     # print 'excl', opts.exclude_individuals_indexed_to_orig_file
 
     ## before remapping introgressed regions, potentially output all introgressed regions in bed format
-    for intr_chrom in sorted(chr_intr_regions):
-        for s,e in chr_intr_regions[intr_chrom]:
-            # get the ind: intr_chrom // 2
-            # and the hap: intr_chrom % 2
-            print '\t'.join(str(s) for s in [opts.current_ms_chrom, s, e, 
-                                             '%s_i%d' % (opts.current_ms_chrom, intr_chrom // 2), 
-                                             '%s_i%d_%d' % (opts.current_ms_chrom, intr_chrom // 2, intr_chrom % 2), 
-                                             intr_chrom, 
-                                             'INTROGRESSED_HAP'])
+    if opts.report_intr_bed:
+        for intr_chrom in sorted(chr_intr_regions):
+            for s,e in chr_intr_regions[intr_chrom]:
+                # get the ind: intr_chrom // 2
+                # and the hap: intr_chrom % 2
+                print '\t'.join(str(s) for s in [opts.current_ms_chrom, s, e, 
+                                                 '%s_i%d' % (opts.current_ms_chrom, intr_chrom // 2), 
+                                                 '%s_i%d_%d' % (opts.current_ms_chrom, intr_chrom // 2, intr_chrom % 2), 
+                                                 intr_chrom, 
+                                                 'INTROGRESSED_HAP'])
+                pass
             pass
         pass
     
@@ -433,7 +462,7 @@ def read_ms_header(ms_file, opts):
 
     ## check that number of chromosomes in ms file matches ms_pop_sizes
     if num_chroms != sum(opts.ms_pop_sizes[1:]):
-        print ("Mismatch between number of simulated chromosomes (%d) and" + \
+        print ("Mismatch between number of simulated chromosomes (%d) and " + \
                    "population definitions given with --ms-pop-sizes ( %r == %d )") % (num_chroms, 
                                                                                        opts.ms_pop_sizes[1:],
                                                                                        sum(opts.ms_pop_sizes[1:]))
@@ -459,7 +488,7 @@ def read_ms_header(ms_file, opts):
         sys.exit(-1)
         pass
 
-    ## check that a) the archaic chromosomes are at the end, and b) that all other populations have diploid individuals (even number of chrs)
+     ## check that a) the archaic chromosomes are at the end, and b) that all other populations have diploid individuals (even number of chrs)
     pop_indices = range(opts.ms_pop_sizes[0])
     if len(opts.ms_archaic_populations) > 0 and sorted(pop_indices[-len(opts.ms_archaic_populations):]) != sorted(opts.ms_archaic_populations):
         print "Archaic populations must be the last simulated populations (may no longer actually be important..)."
@@ -469,6 +498,8 @@ def read_ms_header(ms_file, opts):
         print sorted(opts.ms_archaic_populations)
         sys.exit(-1)
         pass
+
+
 
     # print pop_indices[:len(opts.ms_archaic_populations)]
     

@@ -79,7 +79,11 @@ parser.add_argument('-mspops', '--ms-pop-sizes', default=None, nargs='+', type=i
 parser.add_argument('-msinds', '--ms-num-diploid-inds', default=None, type=int, help='The number of diploid individuals considered. This is important because we sometimes simulate a single archaic chromosome.')
 # parser.add_argument('-msarc', '--ms-archaic-chromosomes', default=None, nargs='+', type=int, help='The archaic chromosomes, if simulated.')
 parser.add_argument('-msarc', '--ms-archaic-populations', default=[], nargs='+', type=int, help='The archaic populations, if simulated.')
-parser.add_argument('-msarcjt', '--ms-archaic-populations-join-times', default=[], nargs='+', type=float, help='The archaic population join times with the *modern human ancestors*. These are used to identify introgressed haplotypes.')
+parser.add_argument('-msarcjt', '--ms-archaic-populations-join-times', default=[], nargs='+', type=float, 
+                    help='The archaic population join times with the *modern human ancestors*. These are used to identify introgressed haplotypes.')
+parser.add_argument('-msarc-to-process', '--ms-archaic-population-to-process', default=None, type=int, 
+                    help='The archaic population to process, if more than one is given.  Default is the first archaic population!')
+parser.add_argument('-msintrbed', '--report-intr-bed', action='store_true', help='Report introgressed haplotypes in bed format, in addition to other output.')
 parser.add_argument('-mssimlen', '--ms-simulated-region-length', default=None, type=int, help='The number of bases simulated in ms (i.e., the second argument to -r).')
 parser.add_argument('-illumina-chrom', '--vcf-has-illumina-chrnums', action='store_true')
 parser.add_argument('-archaic-vcf', '--archaic-vcf', required = False, nargs='+', help = 'VCF file listing archaic sites', default=None)
@@ -193,11 +197,13 @@ elif opts.vcf_is_ms_file and opts.ms_simulated_region_length == None:
     sys.exit(-1)
     pass
 
-# elif opts.vcf_is_ms_file and opts.ms_archaic_populations == None:
-#     print "ms file requires --ms-archaic-populations."
-#     sys.exit(-1)
-#     pass
-    
+elif len(opts.ms_archaic_populations) != len(opts.ms_archaic_populations_join_times):
+    print "-msarc and -msarcjt must both be given if one is:"
+    print "-msarc:", opts.ms_archaic_populations
+    print "-msarcjt:", opts.ms_archaic_populations_join_times
+    sys.exit(-1)
+    pass
+
 
 if opts.gzip_vcf_file != None:
     opts.vcf_file = gzip.open(opts.gzip_vcf_file)

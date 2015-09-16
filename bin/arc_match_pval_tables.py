@@ -14,13 +14,13 @@ def mydd3():
 
 def initialize_analysis(opts):
     
-    print "initializing tables..."
+    #print "initializing tables..."
     #opts.arc_match_table = defaultdict(lambda : defaultdict(lambda : defaultdict( Counter )))
     opts.arc_match_table = defaultdict(mydd3)
 
     # print opts.arc_match_table[0][0][0]
                 
-    print "... FINISHED initializing tables"
+    #print "... FINISHED initializing tables"
         
     pass
 

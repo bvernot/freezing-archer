@@ -13,6 +13,7 @@ fi
 header=$(head -n1 $1)
 
 # echo $header
+>&2 echo "processing $1"
 cat $1
 
 shift
