@@ -2,20 +2,36 @@
 
 Tools for identifying introgressed archaic sequence.  These programs and scripts were used in Vernot et al, Science, 2016.  They are somewhat hacked together - please let me know if something doesn't work.
 
+Requirements:
+ - python 2.x [I use 2.7.3, so I can't guarantee that it will work with other versions]
+ - python bitarray module: https://pypi.python.org/pypi/bitarray/0.8.1
+ - all files from http://akeylab.gs.washington.edu/Vernot_2016/program_data
+
 ## General pipeline (details below):
 
 1. Calculate S* and archaic match p-values in 50kb windows.
     - This is usually run once for Denisovan and once for Neandertal. Unfortunately, the code can handle only one archaic genome at a time.
-2. Compute posterior probabilities for each putative introgressed haplotype, and categorize into null, Neandertal and Denisovan haplotypes.
+2. Assign S* thresholds based on simulated data
+3. Compute posterior probabilities for each putative introgressed haplotype, and categorize into null, Neandertal and Denisovan haplotypes.
 
 ## S* and Archaic match p-values
+
+I use two custom file formats:
+* .bbg - binary bed file
+* .bsg - binary sequence file [essentially binary fasta]
+These are my ancient attempts at having constant-time lookup to get a) if a particular site is masked or not, and b) the reference / ancestral / etc base at a given position.  These files can be generated with:
+    python bin/myBedTools3.py merge -b yourbedfile.bed -obbg yourbedfile.bed.bbg
+This currently only works for hg19 coordinates, and the bed file chromosomes must begin with "chr" and be in the set chr1-22,chrX,chrY,chrMT.
+They can be converted back with:
+    python bin/myBedTools3.py merge -bbg yourbedfile.bed.bbg
+    python bin/myBedTools3.py merge -bsg yourbedfile.bed.bsg
 
 ### To run with Neanderthal as archaic:
 
     chr=1
-    arc=neand
+    arc=neand # arc=den if running for denisovan
     pop=PNG
-    arc_vcf=filtered_vcfs_${arc}_mpi_minimal_filters/chr$chr.${arc}_filtered.vcf.gz
+    arc_vcf=program_data/filtered_vcfs_${arc}_mpi_minimal_filters/chr$chr.${arc}_filtered.vcf.gz
     # run on first 5mb of chromosome
     s=0
     e=5000000
@@ -25,12 +41,12 @@ Tools for identifying introgressed archaic sequence.  These programs and scripts
         --vcf-has-illumina-chrnums \
         -vcfz your_data.vcf.gz \
         -indf sample_pop_mapping_file.txt \
-        -ptable archaic_match_table_files.${arc}_table.fields_8-10.12-.gz.db \
+        -ptable program_data/archaic_match_table_files.${arc}_table.fields_8-10.12-.gz.db \
         -target-pops $pop \
         -ref-pops YRI \
         --archaic-vcf $arc_vcf \
         -p 10 \
-        -ancbsg chimp.bsg \
+        -ancbsg program_data/chimp.bsg \
         -winlen  50000 \
         -winstep 10000 \
         -x exclude_bases.bbg \
