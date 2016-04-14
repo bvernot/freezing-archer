@@ -19,10 +19,13 @@ Requirements:
 I use two custom file formats:
 * .bbg - binary bed file
 * .bsg - binary sequence file [essentially binary fasta]
+
 These are my ancient attempts at having constant-time lookup to get a) if a particular site is masked or not, and b) the reference / ancestral / etc base at a given position.  These files can be generated with:
+
     python bin/myBedTools3.py merge -b yourbedfile.bed -obbg yourbedfile.bed.bbg
-This currently only works for hg19 coordinates, and the bed file chromosomes must begin with "chr" and be in the set chr1-22,chrX,chrY,chrMT.
-They can be converted back with:
+
+This currently only works for hg19 coordinates, and the bed file chromosomes must begin with "chr" and be in the set chr1-22,chrX,chrY,chrMT. They can be converted back with:
+
     python bin/myBedTools3.py merge -bbg yourbedfile.bed.bbg
     python bin/myBedTools3.py merge -bsg yourbedfile.bed.bsg
 
