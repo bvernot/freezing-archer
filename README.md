@@ -1,6 +1,16 @@
 # freezing-archer
 
-## To run with Neanderthal as archaic:
+Tools for identifying introgressed archaic sequence.  These programs and scripts were used in Vernot et al, Science, 2016.  They are somewhat hacked together - please let me know if something doesn't work.
+
+## General pipeline (details below):
+
+1. Calculate S* and archaic match p-values in 50kb windows.
+    - This is usually run once for Denisovan and once for Neandertal. Unfortunately, the code can handle only one archaic genome at a time.
+2. Compute posterior probabilities for each putative introgressed haplotype, and categorize into null, Neandertal and Denisovan haplotypes.
+
+## S* and Archaic match p-values
+
+### To run with Neanderthal as archaic:
 
     chr=1
     
@@ -24,7 +34,7 @@
      -ir /net/akey/vol1/home/bvernot/archaic_exome/data/chimp_from_den_epo/latest/chimp_chrAll.mapped.bbg
 
 
-## To run with Denisovan as archaic:
+### To run with Denisovan as archaic:
 
     chr=1
     
@@ -48,9 +58,11 @@
      -ir /net/akey/vol1/home/bvernot/archaic_exome/data/chimp_from_den_epo/latest/chimp_chrAll.mapped.bbg
 
 
-## Running on simulated data
 
-### A toy run with ms output
+
+### Running on simulated data [not necessary for most analyses]
+
+#### A toy run with ms output
 
 A toy example ms command with 4 Africans, 2 non-Africans, and one archaic chromosome:
 
@@ -70,7 +82,7 @@ A few details:
 * **--ms-num-diploid-inds 6:** The number of diploid modern human individuals
 * **-msarc 2:** The archaic population, numbered from 0.  This *has* to be the last population (i.e., here we're simulating populations 0,1,2)
 
-### A more realistic ms command
+#### A more realistic ms command
 
 Population 1 is Africans, Population 2 is East Asian, Population 3 is European.  In bin/generate_ms_params.scale_mig.py, -p1 108 -p2 0 -p3 1 means simulate 108 Africans, no East Asians, and 1 European.  No archaic individuals are simulated.
 
@@ -94,3 +106,25 @@ Population 1 is Africans, Population 2 is East Asian, Population 3 is European. 
 [More models can be found here](experiments/null_models/ms_models)
 
 [Commands to run S* on those models here](experiments/null_models/bin/submit_null_model_grid_simulations.sh)
+
+
+## Assign S* Thresholds from Simulated Data
+
+This requires a precomputed glm model, fitting recombination rate and diversity to S* quantiles.  This model is in the supporting data folder.
+
+    for f in s_star_results*.gz ; do
+        bin/process_sstar_into_haplotypes3.R $f
+    done
+
+## Compute Posterior Probabilities and Assign Introgressed Status
+
+Combine all chromosome files into one large file for neand and one for den:
+    bin/tsvcatgz s_star_results_neand_chr*.gz.processed_haps.gz | gzip -c > s_star_results_neand.ALLCHRS.gz.processed_haps.gz
+    bin/tsvcatgz s_star_results_den_chr*.gz.processed_haps.gz | gzip -c > s_star_results_den.ALLCHRS.gz.processed_haps.gz
+
+make the outputdir:
+mkdir output
+
+Run the script:
+
+time Rscript ../bin/pval_LL_methods_pick_a_model.R RPS query_trial_output6.new_filters.tsvcat.RPS.neand.ALLCHRS.gz.processed_haps.gz query_trial_output6.new_filters.tsvcat.RPS.den.ALLCHRS.gz.processed_haps.gz output
