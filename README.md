@@ -60,6 +60,7 @@ This currently only works for hg19 coordinates, and the bed file chromosomes mus
         -range $s $e
 
 Format for sample_pop_mapping_file.txt:
+
     sample  pop     super_pop       gender
     UV043   P       PNG     .
     UV1003  AN      PNG     .
