@@ -268,7 +268,7 @@ def process_ms_block_to_snp_list(ms_file, opts):
                                                      opts.current_ms_chrom,
                                                      opts.ms_archaic_chromosomes_by_pop,
                                                      opts.ms_archaic_populations_join_times,
-                                                     opts.ms_archaic_populations.index(opts.ms_archaic_population_to_process))
+                                                     opts.ms_archaic_populations.index(opts.ms_archaic_population_to_process) if opts.ms_archaic_population_to_process != None else None)
 
     if genotype_results == None:
         return None

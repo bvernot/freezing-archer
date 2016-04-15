@@ -62,7 +62,7 @@ def process_vcf_line_to_genotypes(line, opts):
 
 
     if flip_for_derived:
-        flip_map = {'.':'1|1', '0|0':'1|1', '1|0':'0|1', '0|1':'1|0', '1|1':'0|0'}
+        flip_map = {'./.':'1|1', '.':'1|1', '0|0':'1|1', '1|0':'0|1', '0|1':'1|0', '1|1':'0|0'}
         t_gt_flipped = list(itertools.imap(lambda gt : flip_map[gt], t_gt))
         r_gt_flipped = list(itertools.imap(lambda gt : flip_map[gt], r_gt))
         e_gt_flipped = list(itertools.imap(lambda gt : flip_map[gt], e_gt))
@@ -123,10 +123,10 @@ def process_vcf_line_to_genotypes(line, opts):
     
     if opts.debug: print 'reading', snp_d['pos'], genotypes
 
-    gt_map = {'0|0':0, '1|0':1, '0|1':1, '1|1':2}
-    gt_map = {'.':0, '0|0':0, '1|0':1, '0|1':1, '1|1':2}
-    hap_map1 = {'.':0, '0|0':0, '1|0':1, '0|1':0, '1|1':1}
-    hap_map2 = {'.':0, '0|0':0, '1|0':0, '0|1':1, '1|1':1}
+    # gt_map = {'0|0':0, '1|0':1, '0|1':1, '1|1':2}
+    gt_map = {'./.':0, '.':0, '0|0':0, '1|0':1, '0|1':1, '1|1':2}
+    hap_map1 = {'./.':0, '.':0, '0|0':0, '1|0':1, '0|1':0, '1|1':1}
+    hap_map2 = {'./.':0, '.':0, '0|0':0, '1|0':0, '0|1':1, '1|1':1}
     gt_final = list(itertools.imap(lambda gt : gt_map[gt], genotypes))
     hap1_final = list(itertools.imap(lambda gt : hap_map1[gt], genotypes))
     hap2_final = list(itertools.imap(lambda gt : hap_map2[gt], genotypes))
@@ -310,11 +310,11 @@ def vcf_to_genotypes_windowed(vcf_file, winlen, winstep, vcf_ind_pop_file, opts,
             # if it's past the window, then yield the current set of snps
             # then adjust the window, prune snps, and check again if you should add it.. repeat..
             while snp_d['pos'] > winend:
-                print 'WINFILE', chrom, winstart, winend, 'nsnps', len(snps), snps[0]['pos'] if len(snps) > 0 else None, snps[-1]['pos'] if len(snps) > 0 else None
+                # print 'WINFILE', chrom, winstart, winend, 'nsnps', len(snps), snps[0]['pos'] if len(snps) > 0 else None, snps[-1]['pos'] if len(snps) > 0 else None
                 yield (chrom, winstart, winend, snps)
                 if opts.window_file != None:
                     (winchrom, winstart, winend) = [int(i) for i in opts.window_file.readline().strip().split()]
-                    print 'WINFILE', winchrom, winstart, winend
+                    # print 'WINFILE', winchrom, winstart, winend
                     if winchrom != opts.process_chromosome: raise StopIteration
                 else:
                     winstart += winstep

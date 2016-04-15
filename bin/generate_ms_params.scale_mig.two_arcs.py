@@ -50,6 +50,8 @@ parser.add_argument('-migd', '--migration-duration', default=[20], type=float, n
 parser.add_argument('-migp', '--migration-archaic-pop', default=[4], type=float, nargs = '+')
 parser.add_argument('-ast', '--arc-split-time', default=700000, type=float)
 parser.add_argument('-a1a2st', '--arc1-arc2-split-time', default=500000, type=float)
+parser.add_argument('-a1pdiv', '--arc1-pop-divergence', default=50000, type=float)
+parser.add_argument('-a2pdiv', '--arc2-pop-divergence', default=50000, type=float)
 parser.add_argument('-recomb', '--recomb', default='1e-8')
 parser.add_argument('-tbsfile', '--tbsfile', default=None)
 parser.add_argument('-mu', '--mu', default=2.3e-8, type=float)
@@ -210,7 +212,9 @@ if args.model == 'asn_ea_aa':
     ## population sample sizes
     ## MULTIARC
     # cmd += "-I 4 %d %d %d %d 0 " % (args.pop1_ninds * 2, args.pop2_ninds * 2, args.pop3_ninds * 2, args.arc_chrs)
-    cmd += "-I 5 %d %d %d %d %d 0 " % (args.pop1_ninds * 2, args.pop2_ninds * 2, args.pop3_ninds * 2, args.arc_chrs[0], args.arc_chrs[1])
+    # cmd += "-I 5 %d %d %d %d %d 0 " % (args.pop1_ninds * 2, args.pop2_ninds * 2, args.pop3_ninds * 2, args.arc_chrs[0], args.arc_chrs[1])
+    ## adding two new pops - these will be extra archaic pops related to N and D - potentially never actually used (and here, not sampled at the end)
+    cmd += "-I 7 %d %d %d %d %d 0 0 0 " % (args.pop1_ninds * 2, args.pop2_ninds * 2, args.pop3_ninds * 2, args.arc_chrs[0], args.arc_chrs[1])
 
     if args.debug:
         print get_years(0.006997264)
@@ -227,6 +231,8 @@ if args.model == 'asn_ea_aa':
     # cmd += "-n 4 %e " % scale_N(1500)
     cmd += "-n 4 %e " % scale_N(args.archaic_Ne)
     cmd += "-n 5 %e " % scale_N(args.archaic_Ne)
+    cmd += "-n 6 %e " % scale_N(args.archaic_Ne)
+    cmd += "-n 7 %e " % scale_N(args.archaic_Ne)
 
     ## for now, just use wenqing's parameters (should convert these into using my methods)
     cmd += '-n 1 58.002735978 -n 2 70.041039672 -n 3 187.55 '
@@ -346,6 +352,8 @@ if args.model == 'asn_ea_aa':
 
     ## MULTIARC join the multiple archaics (5 into 4)
     cmd += "-ej %e 5 4 " % (scale_time(args.arc1_arc2_split_time))
+    cmd += "-ej %e 6 4 " % (scale_time(args.arc1_pop_divergence))
+    cmd += "-ej %e 7 5 " % (scale_time(args.arc2_pop_divergence))
     ## allow archaic split time to change
     cmd += "-ej %e 4 1 " % (scale_time(args.arc_split_time))
     

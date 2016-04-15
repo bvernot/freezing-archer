@@ -66,11 +66,14 @@ recomb_grid="0.00005829466
 #     echo "|${recomb}|"
 # done
 
+    # ms_models/null_model_two_pop_10k_10k_base.sh \
+    # ms_models/null_model_two_pop_10k_5k_base.sh \
+    # ms_models/null_model_two_pop_two_wave_10k_5k_base.sh \
 
 
 for model in ms_models/null_model_gravel_asn_scale_60k.sh \
-    ms_models/null_model_two_pop_10k_10k_base.sh \
-    ms_models/null_model_two_pop_10k_5k_base.sh ; do
+    ms_models/null_model_gravel_eur_scale_60k.sh \
+    ; do
     
     iter=1
     n=50
@@ -84,19 +87,22 @@ for model in ms_models/null_model_gravel_asn_scale_60k.sh \
     
     for seg in $(seq -f "%03g" 10 5 400) ; do
 
-        for recomb in $(echo $recomb_grid | cut -f 1-3 -d ' ') ; do
+        for recomb in $recomb_grid ; do
+        #for recomb in $(echo $recomb_grid | cut -f 1-3 -d ' ') ; do
         #for recomb in 0.77880078307 ; do
 
             ofile=null_simulations_$model_name/s_star_null.$model_name.seg_$seg.recomb_${recomb}e8.iter_$iter.gz
 
             if [ ! -e $ofile ] ; then
                 
-                echo $iter $seg $recomb $model_name
+                echo SUBMITTING $iter $seg $recomb $model_name
 
                 touch $ofile
-                
-                qsub -l mfree=.1G -js 0 /net/akey/vol1/home/bvernot/tishkoff/run_cluster_job.save_output.sh `pwd` null $ofile \
+                # -l hostname=a00[3-5]
+                qsub  -l mfree=.1G -js 0 /net/akey/vol1/home/bvernot/tishkoff/run_cluster_job.save_output.sh `pwd` null $ofile \
                     bash $model $seg $recomb $n
+
+                # exit
 
             fi
             

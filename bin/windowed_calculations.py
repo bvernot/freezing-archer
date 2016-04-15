@@ -115,6 +115,7 @@ parser.add_argument('-random-seed', '--random-seed', type=int, default=None)
 analysis_group = parser.add_mutually_exclusive_group(required=True)
 analysis_group.add_argument('-s-star', '--s-star', action='store_true')
 analysis_group.add_argument('-test-fns', '--test-fns', action='store_true')
+analysis_group.add_argument('-dist-matrix', '--dist-matrix', action='store_true')
 analysis_group.add_argument('-report-mappable', '--report-mappable', action='store_true')
 analysis_group.add_argument('-random-region-pvals', '--random-region-pvals', action='store_true')
 analysis_group.add_argument('-match-table', '--make-arc-match-pval-tables', action='store_true')
@@ -139,6 +140,9 @@ if opts.s_star:
         import initialize_analysis, run_window_analysis, finish_analysis
 elif opts.make_arc_match_pval_tables:
     from arc_match_pval_tables \
+        import initialize_analysis, run_window_analysis, finish_analysis
+elif opts.dist_matrix:
+    from dist_matrix_fns \
         import initialize_analysis, run_window_analysis, finish_analysis
 elif opts.d_statistics:
     from d_stat_fns \

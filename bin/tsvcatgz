@@ -11,22 +11,17 @@ fi
 
 
 while [ ! -s $1 ] ; do
-    >&2 echo "EMPTY first $1"
+    >&2 echo "EMPTY $1"
     shift
     continue
 done
 
-if [ "$#" == "0" ]; then
-    >&2 echo "ONLY ONE file given, and it is empty"
-    exit 1
-fi
-
-header=$(head -n1 $1)
+header=$(zcat $1 | head -n1)
 f1=$1
 
 # echo $header
 >&2 echo "processing $1"
-cat $1
+zcat $1
 
 shift
 
@@ -39,7 +34,7 @@ for item in "$@" ; do
 
     >&2 echo "processing $(ls -alFrth $item)"
     
-    header_tmp=$(head -n1 $item)
+    header_tmp=$(zcat $item | head -n1)
 
     # echo $header_tmp
     if [[ $header != $header_tmp ]] ; then
@@ -54,7 +49,7 @@ for item in "$@" ; do
         exit 2
     fi
 
-    sed 1d $item
+    zcat $item | sed 1d
     
 done
 
