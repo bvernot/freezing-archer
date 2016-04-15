@@ -3,8 +3,9 @@
 Tools for identifying introgressed archaic sequence.  These programs and scripts were used in Vernot et al, Science, 2016.  They are somewhat hacked together - please let me know if something doesn't work.
 
 Requirements:
- - python 2.x [I use 2.7.3, so I can't guarantee that it will work with other versions]
+ - python 2.x - _I use 2.7.3, so these scripts may not work with other versions_
  - python bitarray module: https://pypi.python.org/pypi/bitarray/0.8.1
+ - numpy module: http://www.numpy.org/
  - all files from http://akeylab.gs.washington.edu/Vernot_2016/program_data
 
 ## General pipeline (details below):
@@ -20,7 +21,7 @@ I use two custom file formats:
 * .bbg - binary bed file
 * .bsg - binary sequence file [essentially binary fasta]
 
-These are my ancient attempts at having constant-time lookup to get a) if a particular site is masked or not, and b) the reference / ancestral / etc base at a given position.  These files can be generated with:
+These are my ancient attempts at having constant-time lookup to get a) if a particular site is masked or not, and b) the reference / ancestral / etc base at a given position.  It would probably be better to have just used tabix.  These files can be generated with:
 
     python bin/myBedTools3.py merge -b yourbedfile.bed -obbg yourbedfile.bed.bbg
 
@@ -52,9 +53,9 @@ This currently only works for hg19 coordinates, and the bed file chromosomes mus
         -ancbsg program_data/chimp.bsg \
         -winlen  50000 \
         -winstep 10000 \
-        -x exclude_bases.bbg \
+        -x exclude_bases2.bbg exclude_bases2.bbg \
         -r callable_bases.bbg \
-        -ir intersect_callable_bases.bbg \
+        -ir intersect_callable_bases1.bbg intersect_callable_bases2.bbg \
         -table-query mh len mapped \
         -tag-ids bigpop -tags $pop \
         -range $s $e
@@ -136,4 +137,4 @@ mkdir output
 
 Run the script:
 
-time Rscript ../bin/pval_LL_methods_pick_a_model.R RPS query_trial_output6.new_filters.tsvcat.RPS.neand.ALLCHRS.gz.processed_haps.gz query_trial_output6.new_filters.tsvcat.RPS.den.ALLCHRS.gz.processed_haps.gz output
+time Rscript bin/pval_LL_methods_pick_a_model.R $pop s_star_results_neand.ALLCHRS.gz.processed_haps.gz s_star_results_den.ALLCHRS.gz.processed_haps.gz output
