@@ -6,7 +6,7 @@ Requirements:
  - python 2.x - _I use 2.7.3, so these scripts may not work with other versions_
  - python bitarray module: https://pypi.python.org/pypi/bitarray/0.8.1
  - numpy module: http://www.numpy.org/
- - all files from http://akeylab.gs.washington.edu/Vernot_2016/program_data
+ - all files from http://akeylab.gs.washington.edu/vernot_et_al_2016_release_data/program_data
 
 ## General pipeline (details below):
 
@@ -129,12 +129,14 @@ This requires a precomputed glm model, fitting recombination rate and diversity 
 ## Compute Posterior Probabilities and Assign Introgressed Status
 
 Combine all chromosome files into one large file for neand and one for den:
+
     bin/tsvcatgz s_star_results_neand_chr*.gz.processed_haps.gz | gzip -c > s_star_results_neand.ALLCHRS.gz.processed_haps.gz
     bin/tsvcatgz s_star_results_den_chr*.gz.processed_haps.gz | gzip -c > s_star_results_den.ALLCHRS.gz.processed_haps.gz
 
 make the outputdir:
-mkdir output
+
+    mkdir output
 
 Run the script:
 
-time Rscript bin/pval_LL_methods_pick_a_model.R $pop s_star_results_neand.ALLCHRS.gz.processed_haps.gz s_star_results_den.ALLCHRS.gz.processed_haps.gz output
+    time Rscript bin/pval_LL_methods_pick_a_model.R $pop s_star_results_neand.ALLCHRS.gz.processed_haps.gz s_star_results_den.ALLCHRS.gz.processed_haps.gz output
